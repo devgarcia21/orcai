@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Orçaí
 
-## Getting Started
+Orçamentos profissionais pelo WhatsApp, com sinal por PIX.
 
-First, run the development server:
+O Orçaí é um SaaS para prestadores de serviço brasileiros (eletricistas, encanadores,
+pedreiros, oficinas) criarem orçamentos bonitos e claros direto do celular, enviarem ao
+cliente pelo WhatsApp e receberem o sinal por PIX.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+> 🚧 Em construção. Etapa atual: **1 — base do projeto, login e perfil do prestador**.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Tecnologias
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Next.js 16 (App Router) · TypeScript · Tailwind CSS · shadcn/ui · Supabase (Auth,
+Postgres, Storage) · zod · Server Actions
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Como rodar
 
-## Learn More
+**Pré-requisitos:** Node.js 22 ou superior e uma conta gratuita no
+[Supabase](https://supabase.com).
 
-To learn more about Next.js, take a look at the following resources:
+1. Instale as dependências:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+   ```bash
+   npm install
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+2. Copie `.env.local.example` para `.env.local` e preencha com a URL e a chave
+   publicável do seu projeto Supabase (_Project Settings → API Keys_).
 
-## Deploy on Vercel
+3. No Supabase, abra o **SQL Editor**, cole o conteúdo de
+   `supabase/migrations/001_inicial.sql` e clique em **Run**.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+4. Rode o projeto:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+   ```bash
+   npm run dev
+   ```
+
+   Acesse <http://localhost:3000>.
+
+## Scripts
+
+| Comando             | O que faz                         |
+| ------------------- | --------------------------------- |
+| `npm run dev`       | Servidor de desenvolvimento       |
+| `npm run build`     | Build de produção                 |
+| `npm run start`     | Servidor de produção (após build) |
+| `npm run lint`      | Verifica o código com ESLint      |
+| `npm run typecheck` | Verifica os tipos do TypeScript   |
+| `npm run format`    | Formata o código com Prettier     |
+
+## Roadmap
+
+1. ✅ Base: login, cadastro e perfil do prestador
+2. Clientes e orçamentos com itens
+3. PDF profissional
+4. Link público com aprovar/recusar e envio por WhatsApp
+5. QR Code PIX estático do sinal
+6. IA que transforma texto ou áudio em itens de orçamento
+7. Painel com métricas
+8. Testes e deploy
