@@ -18,6 +18,7 @@ Projeto de portfólio: o código deve ser limpo, organizado e fácil de ler.
 - **Supabase** (Auth, Postgres, Storage) via `@supabase/ssr`
 - **zod 4** para validação (mesmas regras no cliente e no servidor)
 - **Server Actions** para todos os formulários
+- **Vitest** para testes das regras de negócio
 - ESLint (config do Next + `eslint-config-prettier`) e Prettier (com plugin do Tailwind)
 
 ## Comandos
@@ -27,36 +28,50 @@ npm run dev          # servidor de desenvolvimento (http://localhost:3000)
 npm run build        # build de produção (deve passar sem erros)
 npm run lint         # ESLint
 npm run typecheck    # tsc --noEmit
+npm test             # Vitest (uma vez); npm run test:watch para modo contínuo
 npm run format       # Prettier em tudo
 ```
+
+Antes de commitar: `lint`, `typecheck`, `test` e `build` precisam passar.
 
 ## Estrutura
 
 ```
 src/
   proxy.ts                  # (antigo middleware) renova sessão e protege /painel/*
-  actions/                  # Server Actions ("use server"): auth.ts, perfil.ts
+  actions/                  # Server Actions: auth, perfil, clientes, orcamentos
   app/
     page.tsx                # landing
     (auth)/login, cadastro  # telas públicas de autenticação
     auth/callback/route.ts  # destino do link de confirmação de e-mail
-    painel/                 # área logada (layout com cabeçalho) + perfil
+    painel/                 # área logada: layout (cabeçalho + navegação), error, not-found
+      clientes/ [id]/       # lista com busca; detalhes + orçamentos do cliente
+      orcamentos/ novo/ [id]/ [id]/editar/
+      perfil/
   components/
     ui/                     # componentes shadcn (não editar à toa)
-    formulario/             # Campo, CampoBase, BotaoEnviar, MensagemFormulario
-    auth/ painel/ perfil/   # componentes por domínio
+    comum/                  # EstadoVazio, CabecalhoPagina, CampoBusca, ConfirmarAcao
+    formulario/             # Campo, CampoBase, BotaoEnviar, MensagemFormulario,
+                            # InputMoeda, SelectNativo, Secao
+    clientes/ orcamentos/ painel/ perfil/ auth/   # componentes por domínio
   hooks/use-acao-formulario.ts  # liga <form> a uma Server Action
   lib/
+    orcamento/calculos.ts   # ⭐ ÚNICA fonte dos cálculos (tela e servidor) + testes
+    orcamento/regras.ts     # status, transições, unidades, numeração #0001
+    moeda.ts datas.ts       # R$ e datas pt-BR (+ testes)
+    busca.ts                # busca sem acento
     supabase/               # clientes browser/server/proxy, env, tradução de erros
     dados/                  # leitura de dados no servidor (com React cache)
-    validacoes/             # schemas zod
-    types/database.ts       # tipos do banco (manuais por enquanto)
-    acoes.ts                # tipo EstadoAcao e helpers erro()/sucesso()
+    validacoes/             # schemas zod (comum, auth, perfil, cliente, orcamento)
+    types/database.ts       # TODOS os tipos do banco (manuais por enquanto)
+    acoes.ts                # EstadoAcao<T>, erro(), sucesso(), errosPorCaminho()
     formatacao.ts pix.ts rotas.ts
 supabase/migrations/        # SQL colado manualmente no SQL Editor do Supabase
 ```
 
 ## Decisões tomadas
+
+### Gerais (Etapa 1)
 
 - **Proxy, não middleware**: no Next 16 o arquivo se chama `src/proxy.ts` (mesma função).
   Ele renova a sessão com `getClaims()` e faz os redirecionamentos de acesso. As páginas
@@ -67,36 +82,101 @@ supabase/migrations/        # SQL colado manualmente no SQL Editor do Supabase
   `options.data` no `signUp`. Por isso não existe policy de insert em `prestadores`.
 - **Formulários**: Server Action + `useActionState` via `useAcaoFormulario`, que usa
   `onSubmit` + `startTransition` para o React **não limpar os campos** quando há erro.
-  Toda action devolve `EstadoAcao` (`status`, `mensagem`, `errosCampos`).
+  Toda action devolve `EstadoAcao<T>` (`status`, `mensagem`, `errosCampos`, `dados`).
+  `errosCampos` usa o caminho do campo como chave (`"itens.0.quantidade"`).
 - **Validação dupla**: os schemas zod em `lib/validacoes` rodam no servidor; regras
-  usadas no cliente (ex.: `validarLogo`) moram no mesmo arquivo para não duplicar.
+  usadas no cliente (ex.: `validarLogo`, `lerQuantidade`) são as mesmas funções.
 - **Dados normalizados**: telefone salvo só com dígitos (`11987654321`); chave PIX salva
   no formato oficial (CPF/CNPJ só dígitos, telefone `+55...`, e-mail/EVP minúsculos).
   Máscaras só na interface (`lib/formatacao.ts`).
 - **Logo**: enviada no mesmo formulário do perfil (limite de body das Server Actions
   ajustado para 3 MB). Caminho `logos/<user_id>/logo-<timestamp>.<ext>` — nome único evita
   cache velho; as antigas são apagadas **depois** que o banco aponta para a nova.
-- **Cache Components ligado**: dados por requisição (cookies, searchParams, Supabase)
-  ficam dentro de `<Suspense>` com skeletons. Não use `new Date()` em componentes
-  pré-renderizados.
 - **Cadastro com ou sem confirmação de e-mail**: se o Supabase devolver sessão, vai direto
   ao painel; senão mostra "confira seu e-mail". `/auth/callback` aceita `code` e `token_hash`.
 - **Redirecionamento seguro**: `?next=` passa por `destinoSeguro()` (evita open redirect).
 - **Idioma**: interface, mensagens, nomes de domínio (tabelas, colunas, funções) em
   português. Termos técnicos do framework continuam em inglês.
 
+### Cache Components (importante)
+
+- Dados por requisição (cookies, params, searchParams, Supabase) ficam dentro de
+  `<Suspense>`: o layout do painel envolve as páginas; o cabeçalho tem o seu próprio.
+- `createClient()` do servidor chama **`connection()`**: com `partialPrefetching`, os
+  cookies ficam disponíveis no pré-render do App Shell, e o Supabase usa `Date.now()`
+  para validar o token — o que é proibido no pré-render. Não remova.
+- `usePathname()` em rotas dinâmicas também exige `<Suspense>` (ver `navegacao.tsx`).
+- Nunca use `new Date()`, `Date.now()` ou `Math.random()` em componentes renderizados.
+  Datas "de hoje" são calculadas no servidor (depois dos dados) e passadas por props.
+- `error.tsx` usa `retry()` (recarrega os dados), não `reset()`.
+
+### Dinheiro e cálculos (Etapa 2)
+
+- **Dinheiro sempre em centavos (integer)**, no banco e no código. Nunca float.
+  Conversão para texto só na tela (`formatarMoeda`); leitura de texto por manipulação
+  de string (`lerMoeda`), sem float.
+- **Um único módulo de cálculo** (`lib/orcamento/calculos.ts`, funções puras e testadas):
+  total do item (quantidade convertida em centésimos inteiros antes de multiplicar),
+  subtotal, desconto (limitado ao subtotal), total e sinal. Arredondamento: meio para cima.
+  O mesmo módulo alimenta o resumo em tempo real, a validação do servidor e as listagens.
+- **Totais não são guardados no banco**: são sempre derivados dos itens. Assim nunca
+  existe um total divergente dos itens. As listagens trazem os itens junto e calculam.
+- **Servidor nunca confia no navegador**: a action recebe os dados brutos (quantidade como
+  texto digitado), valida com zod e recalcula. O desconto é rejeitado se passar do subtotal.
+- Input de dinheiro com máscara "de maquininha" (`InputMoeda`): dígitos entram pela
+  direita; o valor do componente é sempre em centavos.
+
+### Banco (Etapa 2)
+
+- **Numeração por prestador** via contador `prestadores.ultimo_numero_orcamento`
+  incrementado por trigger: serializa inserções simultâneas (lock na linha) e **não
+  reaproveita** números de orçamentos excluídos. O trigger ignora qualquer `numero`
+  enviado; outro trigger impede alterar `numero` e `prestador_id`.
+- **FK composta** `orcamentos (cliente_id, prestador_id) → clientes (id, prestador_id)`:
+  garante no banco que o cliente do orçamento é do mesmo prestador. `on delete restrict`
+  impede excluir cliente com orçamentos (erro **23001**; tratar junto com 23503 via
+  `violouChaveEstrangeira`).
+- **Salvar orçamento + itens é atômico** pela função SQL `salvar_orcamento` (security
+  invoker, então o RLS vale). Na edição, os itens são apagados e regravados em ordem.
+- **Aprovados/recusados ficam congelados no banco** (triggers `proteger_orcamento` e
+  `proteger_itens_orcamento`): só podem ser duplicados ou excluídos. A exclusão marca a
+  transação (`orcai.excluindo_orcamento`) para a cascata dos itens passar.
+- Transições de status permitidas (`proximosStatus`): rascunho → enviado/aprovado/recusado;
+  enviado → aprovado/recusado. Aprovar/recusar pede confirmação (é definitivo).
+- Erros levantados pelas funções SQL (`raise exception 'orcamento_finalizado'`) são
+  traduzidos em `lib/supabase/erros.ts`.
+- As migrations foram validadas com PGlite (Postgres em WASM) simulando `auth` e `storage`
+  do Supabase: idempotência, RLS entre dois prestadores, numeração, travas e cascatas.
+
+### Interface (Etapa 2)
+
+- **Navegação**: barra fixa embaixo no celular (Início, Orçamentos, Clientes, Perfil);
+  links no cabeçalho a partir do `md`.
+- **Listas**: cartões no celular, tabela a partir do `md` (`TabelaOrcamentos`).
+- **Busca e filtros no navegador**: as listagens carregam até 500 registros do prestador
+  e filtram na hora (busca sem acento). Mover para o servidor quando houver paginação.
+- **Cliente no orçamento**: busca + cadastro num diálogo, sem sair da página. O formulário
+  de cliente é o mesmo da lista de clientes (`DialogoCliente`).
+- **Resumo sempre visível**: barra fixa acima da navegação no celular, lateral no `lg`.
+- Selects nativos (`SelectNativo`) no lugar de dropdowns customizados: melhores no celular.
+- Chaves de itens com contador local (não `crypto.randomUUID`, que não existe em
+  `http://` fora do localhost); ids de campos por posição, estáveis entre SSR e navegador.
+
 ## Convenções
 
 - Mensagens de erro em português, claras e acionáveis ("Digite um telefone válido com DDD").
 - Novos formulários: reutilize `Campo`/`CampoBase`, `BotaoEnviar`, `MensagemFormulario` e
   `useAcaoFormulario`. Nada de lógica de validação duplicada.
-- Novas tabelas: sempre em nova migration numerada (`002_...sql`), idempotente, com RLS.
-- Rotas: use as constantes de `lib/rotas.ts`.
+- Confirmações destrutivas: `ConfirmarAcao` (com `bloqueio` quando a ação não é permitida).
+- Listas vazias: `EstadoVazio` com uma ação clara.
+- Novas tabelas: sempre em nova migration numerada (`003_...sql`), idempotente, com RLS.
+- Tipos do banco só em `lib/types/database.ts`. Rotas só via `lib/rotas.ts`.
+- Regra de negócio nova = função pura em `lib/` + teste no Vitest.
 
 ## Roadmap
 
 - [x] **Etapa 1** — Base: projeto, login, cadastro e perfil do prestador
-- [ ] **Etapa 2** — Clientes e orçamentos com itens
+- [x] **Etapa 2** — Clientes e orçamentos com itens
 - [ ] **Etapa 3** — PDF profissional do orçamento
 - [ ] **Etapa 4** — Link público com aprovar/recusar e envio por WhatsApp
 - [ ] **Etapa 5** — QR Code PIX estático do sinal

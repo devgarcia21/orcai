@@ -4,8 +4,18 @@ export const ROTAS = {
   cadastro: "/cadastro",
   painel: "/painel",
   perfil: "/painel/perfil",
+  clientes: "/painel/clientes",
+  orcamentos: "/painel/orcamentos",
+  novoOrcamento: "/painel/orcamentos/novo",
   authCallback: "/auth/callback",
 } as const;
+
+export const rotaCliente = (id: string) => `${ROTAS.clientes}/${id}`;
+export const rotaOrcamento = (id: string) => `${ROTAS.orcamentos}/${id}`;
+export const rotaEditarOrcamento = (id: string) => `${ROTAS.orcamentos}/${id}/editar`;
+/** Novo orçamento já com o cliente escolhido. */
+export const rotaNovoOrcamentoPara = (clienteId: string) =>
+  `${ROTAS.novoOrcamento}?cliente=${clienteId}`;
 
 /**
  * Garante que o redirecionamento pós-login seja sempre interno ao site,

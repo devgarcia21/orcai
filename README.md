@@ -6,12 +6,20 @@ O Orçaí é um SaaS para prestadores de serviço brasileiros (eletricistas, enc
 pedreiros, oficinas) criarem orçamentos bonitos e claros direto do celular, enviarem ao
 cliente pelo WhatsApp e receberem o sinal por PIX.
 
-> 🚧 Em construção. Etapa atual: **1 — base do projeto, login e perfil do prestador**.
+> 🚧 Em construção. Etapa atual: **2 — clientes e orçamentos com itens**.
+
+## O que já funciona
+
+- Cadastro, login e perfil do prestador (com logo e chave PIX)
+- Cadastro de clientes com busca por nome ou telefone
+- Orçamentos com itens, desconto, sinal e validade, com resumo calculado em tempo real
+- Numeração automática por prestador (#0001, #0002...)
+- Status (rascunho, enviado, aprovado, recusado), duplicar e excluir
 
 ## Tecnologias
 
 Next.js 16 (App Router) · TypeScript · Tailwind CSS · shadcn/ui · Supabase (Auth,
-Postgres, Storage) · zod · Server Actions
+Postgres, Storage) · zod · Server Actions · Vitest
 
 ## Como rodar
 
@@ -27,8 +35,12 @@ Postgres, Storage) · zod · Server Actions
 2. Copie `.env.local.example` para `.env.local` e preencha com a URL e a chave
    publicável do seu projeto Supabase (_Project Settings → API Keys_).
 
-3. No Supabase, abra o **SQL Editor**, cole o conteúdo de
-   `supabase/migrations/001_inicial.sql` e clique em **Run**.
+3. No Supabase, abra o **SQL Editor** e execute, **em ordem**, cada arquivo de
+   `supabase/migrations/`:
+   1. `001_inicial.sql`
+   2. `002_clientes_orcamentos.sql`
+
+   (Os scripts podem ser executados mais de uma vez sem erro.)
 
 4. Rode o projeto:
 
@@ -40,19 +52,30 @@ Postgres, Storage) · zod · Server Actions
 
 ## Scripts
 
-| Comando             | O que faz                         |
-| ------------------- | --------------------------------- |
-| `npm run dev`       | Servidor de desenvolvimento       |
-| `npm run build`     | Build de produção                 |
-| `npm run start`     | Servidor de produção (após build) |
-| `npm run lint`      | Verifica o código com ESLint      |
-| `npm run typecheck` | Verifica os tipos do TypeScript   |
-| `npm run format`    | Formata o código com Prettier     |
+| Comando              | O que faz                         |
+| -------------------- | --------------------------------- |
+| `npm run dev`        | Servidor de desenvolvimento       |
+| `npm run build`      | Build de produção                 |
+| `npm run start`      | Servidor de produção (após build) |
+| `npm test`           | Roda os testes (Vitest)           |
+| `npm run test:watch` | Testes em modo contínuo           |
+| `npm run lint`       | Verifica o código com ESLint      |
+| `npm run typecheck`  | Verifica os tipos do TypeScript   |
+| `npm run format`     | Formata o código com Prettier     |
+
+## Destaques técnicos
+
+- **Dinheiro em centavos inteiros**, nunca em float, do banco à tela.
+- **Um único módulo de cálculo** (`src/lib/orcamento/calculos.ts`), coberto por testes,
+  usado tanto no resumo em tempo real quanto na validação do servidor.
+- **Segurança no banco**: RLS em todas as tabelas, chave estrangeira composta garantindo
+  que o cliente pertence ao mesmo prestador, e orçamentos aprovados/recusados congelados
+  por trigger.
 
 ## Roadmap
 
 1. ✅ Base: login, cadastro e perfil do prestador
-2. Clientes e orçamentos com itens
+2. ✅ Clientes e orçamentos com itens
 3. PDF profissional
 4. Link público com aprovar/recusar e envio por WhatsApp
 5. QR Code PIX estático do sinal

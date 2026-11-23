@@ -10,6 +10,7 @@ import { nomeDeExibicao, obterPrestadorAtual } from "@/lib/dados/prestador";
 import { ROTAS } from "@/lib/rotas";
 
 import { CabecalhoCarregando } from "./carregando";
+import { NavegacaoSuperior } from "./navegacao";
 
 /** Nome da empresa (ou do prestador) e logo, lidos do perfil. */
 async function IdentidadePrestador() {
@@ -38,7 +39,7 @@ async function IdentidadePrestador() {
 export function CabecalhoPainel() {
   return (
     <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-3xl items-center justify-between gap-3 px-4">
+      <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-3 px-4">
         <div className="flex min-w-0 items-center gap-3">
           <Marca href={ROTAS.painel} className="shrink-0" />
           <span className="h-6 w-px shrink-0 bg-border" aria-hidden />
@@ -47,12 +48,15 @@ export function CabecalhoPainel() {
           </Suspense>
         </div>
 
-        <form action={sair}>
-          <Button type="submit" variant="ghost" className="h-10 shrink-0">
-            <LogOut aria-hidden />
-            Sair
-          </Button>
-        </form>
+        <div className="flex shrink-0 items-center gap-2">
+          <NavegacaoSuperior />
+          <form action={sair}>
+            <Button type="submit" variant="ghost" className="h-10 shrink-0">
+              <LogOut aria-hidden />
+              Sair
+            </Button>
+          </form>
+        </div>
       </div>
     </header>
   );

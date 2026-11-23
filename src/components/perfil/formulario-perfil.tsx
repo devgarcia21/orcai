@@ -4,26 +4,16 @@ import { useState } from "react";
 
 import { salvarPerfil } from "@/actions/perfil";
 import { BotaoEnviar } from "@/components/formulario/botao-enviar";
-import { Campo, CampoBase, CLASSE_CONTROLE } from "@/components/formulario/campo";
+import { Campo, CampoBase } from "@/components/formulario/campo";
 import { MensagemFormulario } from "@/components/formulario/mensagem-formulario";
+import { Secao } from "@/components/formulario/secao";
+import { SelectNativo } from "@/components/formulario/select-nativo";
 import { useAcaoFormulario } from "@/hooks/use-acao-formulario";
 import { formatarChavePix, formatarTelefone } from "@/lib/formatacao";
 import { OPCOES_CHAVE_PIX } from "@/lib/pix";
 import { TIPOS_CHAVE_PIX, type Prestador, type TipoChavePix } from "@/lib/types/database";
-import { cn } from "@/lib/utils";
 
 import { CampoLogo } from "./campo-logo";
-
-function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
-  return (
-    <fieldset className="grid gap-5">
-      <legend className="mb-1 text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-        {titulo}
-      </legend>
-      {children}
-    </fieldset>
-  );
-}
 
 export function FormularioPerfil({ prestador }: { prestador: Prestador }) {
   const { estado, enviando, onSubmit } = useAcaoFormulario(salvarPerfil);
@@ -85,7 +75,7 @@ export function FormularioPerfil({ prestador }: { prestador: Prestador }) {
           erros={erros.tipo_chave_pix}
         >
           {(aria) => (
-            <select
+            <SelectNativo
               name="tipo_chave_pix"
               value={tipoPix}
               onChange={(e) => {
@@ -93,10 +83,6 @@ export function FormularioPerfil({ prestador }: { prestador: Prestador }) {
                 setTipoPix(novoTipo);
                 setChavePix((atual) => formatarChavePix(novoTipo, atual));
               }}
-              className={cn(
-                CLASSE_CONTROLE,
-                "w-full rounded-lg border border-input bg-background px-2.5 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive",
-              )}
               {...aria}
             >
               <option value="">Selecione...</option>
@@ -105,7 +91,7 @@ export function FormularioPerfil({ prestador }: { prestador: Prestador }) {
                   {OPCOES_CHAVE_PIX[tipo].rotulo}
                 </option>
               ))}
-            </select>
+            </SelectNativo>
           )}
         </CampoBase>
         <Campo

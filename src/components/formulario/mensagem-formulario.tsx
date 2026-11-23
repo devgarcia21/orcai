@@ -5,7 +5,11 @@ import type { EstadoAcao } from "@/lib/acoes";
 import { cn } from "@/lib/utils";
 
 /** Mostra a mensagem geral de sucesso ou erro devolvida pela Server Action. */
-export function MensagemFormulario({ estado }: { estado: EstadoAcao }) {
+export function MensagemFormulario({
+  estado,
+}: {
+  estado: Pick<EstadoAcao<unknown>, "status" | "mensagem">;
+}) {
   if (estado.status === "inicial" || !estado.mensagem) return null;
 
   const deuErro = estado.status === "erro";

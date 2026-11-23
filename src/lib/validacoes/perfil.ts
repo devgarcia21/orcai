@@ -4,16 +4,10 @@ import { somenteDigitos } from "@/lib/formatacao";
 import { cnpjValido, cpfValido, telefoneValido } from "@/lib/pix";
 import { TIPOS_CHAVE_PIX } from "@/lib/types/database";
 
+import { telefoneOpcional, textoOpcional } from "./comum";
+
 export const LOGO_TAMANHO_MAXIMO = 2 * 1024 * 1024; // 2 MB
 export const LOGO_TIPOS_ACEITOS = ["image/png", "image/jpeg"] as const;
-
-/** Texto opcional: espaços são removidos e vazio vira null. */
-const textoOpcional = (max: number, rotulo: string) =>
-  z
-    .string()
-    .trim()
-    .max(max, `${rotulo} pode ter no máximo ${max} caracteres.`)
-    .transform((v) => (v === "" ? null : v));
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -36,13 +30,7 @@ export const perfilSchema = z
       .min(2, "Informe seu nome (pelo menos 2 letras).")
       .max(100, "O nome pode ter no máximo 100 caracteres."),
     nome_empresa: textoOpcional(100, "O nome da empresa"),
-    telefone: z
-      .string()
-      .transform(somenteDigitos)
-      .refine((d) => d === "" || telefoneValido(d), {
-        message: "Digite um telefone válido com DDD, como (11) 98765-4321.",
-      })
-      .transform((d) => (d === "" ? null : d)),
+    telefone: telefoneOpcional,
     cidade: textoOpcional(100, "A cidade"),
     tipo_chave_pix: z
       .union([z.enum(TIPOS_CHAVE_PIX), z.literal("")], {

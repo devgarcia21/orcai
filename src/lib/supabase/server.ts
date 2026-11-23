@@ -2,6 +2,7 @@ import "server-only";
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 
 import { getSupabaseEnv } from "./env";
 
@@ -10,8 +11,12 @@ import { getSupabaseEnv } from "./env";
  * Crie um novo a cada requisição (nunca guarde em variável global).
  */
 export async function createClient() {
-  // cookies() vem primeiro: marca a rota como dinâmica antes de qualquer outra coisa.
   const cookieStore = await cookies();
+  // Com partialPrefetching, cookies() fica disponível no pré-render do "App
+  // Shell" e não adia mais a renderização. O Supabase usa o horário atual
+  // (Date.now) para validar o token, o que o Cache Components proíbe no
+  // pré-render. connection() marca explicitamente: "isto é por requisição".
+  await connection();
   const { url, publishableKey } = getSupabaseEnv();
 
   return createServerClient(url, publishableKey, {

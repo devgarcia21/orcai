@@ -2,23 +2,23 @@ import { ArrowRight, FileText, TriangleAlert } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { EstadoVazio } from "@/components/comum/estado-vazio";
+import { BotaoNovoOrcamento } from "@/components/orcamentos/botao-novo-orcamento";
+import { TabelaOrcamentos } from "@/components/orcamentos/tabela-orcamentos";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { listarOrcamentos } from "@/lib/dados/orcamentos";
 import { obterPrestadorAtual, perfilCompleto } from "@/lib/dados/prestador";
 import { ROTAS } from "@/lib/rotas";
-import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Painel" };
 
+const QUANTIDADE_RECENTES = 5;
+
 export default async function PainelPage() {
-  const prestador = await obterPrestadorAtual();
+  const [prestador, recentes] = await Promise.all([
+    obterPrestadorAtual(),
+    listarOrcamentos(undefined, QUANTIDADE_RECENTES),
+  ]);
   const primeiroNome = prestador.nome.split(" ")[0] || "prestador";
   const completo = perfilCompleto(prestador);
 
@@ -29,12 +29,16 @@ export default async function PainelPage() {
 
   return (
     <div className="grid gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Olá, {primeiroNome}! 👋</h1>
-        <p className="mt-1 text-muted-foreground">
-          Bem-vindo ao Orçaí. Aqui você vai criar orçamentos profissionais e receber o
-          sinal por PIX.
-        </p>
+      <div className="grid gap-4 sm:flex sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Olá, {primeiroNome}! 👋
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            Crie orçamentos profissionais e acompanhe cada um por aqui.
+          </p>
+        </div>
+        <BotaoNovoOrcamento className="h-14 w-full text-base sm:h-12 sm:w-auto" />
       </div>
 
       {!completo && (
@@ -53,30 +57,35 @@ export default async function PainelPage() {
         </Alert>
       )}
 
-      <Card>
-        <CardHeader>
-          <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <FileText className="size-5" aria-hidden />
-          </div>
-          <CardTitle>Orçamentos</CardTitle>
-          <CardDescription>
-            Em breve você poderá cadastrar clientes, montar orçamentos com itens e enviar
-            pelo WhatsApp.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link
-            href={ROTAS.perfil}
-            className={cn(
-              buttonVariants({ variant: "outline" }),
-              "h-11 w-full sm:w-auto",
-            )}
-          >
-            Revisar meu perfil
-            <ArrowRight aria-hidden />
-          </Link>
-        </CardContent>
-      </Card>
+      <section className="grid gap-3" aria-labelledby="titulo-recentes">
+        <div className="flex items-center justify-between">
+          <h2 id="titulo-recentes" className="font-semibold">
+            Últimos orçamentos
+          </h2>
+          {recentes.length > 0 && (
+            <Link
+              href={ROTAS.orcamentos}
+              className="flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+            >
+              Ver todos
+              <ArrowRight className="size-4" aria-hidden />
+            </Link>
+          )}
+        </div>
+
+        {recentes.length > 0 ? (
+          <TabelaOrcamentos orcamentos={recentes} />
+        ) : (
+          <EstadoVazio
+            icone={FileText}
+            titulo="Você ainda não tem orçamentos"
+            descricao="Monte o primeiro em poucos minutos: escolha o cliente, adicione os itens e pronto."
+            acao={
+              <BotaoNovoOrcamento className="w-full" texto="Criar primeiro orçamento" />
+            }
+          />
+        )}
+      </section>
     </div>
   );
 }
