@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   centavosDaMascara,
   formatarMoeda,
+  formatarMoedaCompacta,
   formatarQuantidade,
   lerMoeda,
   lerQuantidade,
@@ -109,5 +110,18 @@ describe("formatarQuantidade", () => {
     expect(formatarQuantidade(2.5)).toBe("2,5");
     expect(formatarQuantidade(10)).toBe("10");
     expect(formatarQuantidade(1000)).toBe("1.000");
+  });
+});
+
+describe("formatarMoedaCompacta", () => {
+  const sem = (t: string) => t.replace(/ /g, " ");
+  it("abrevia valores grandes para rótulos de gráfico", () => {
+    expect(sem(formatarMoedaCompacta(1_234_500))).toBe("R$ 12,3 mil");
+    expect(sem(formatarMoedaCompacta(123_456_700))).toBe("R$ 1,2 mi");
+  });
+  it("valores abaixo de R$ 1.000 continuam por extenso (sem ,00)", () => {
+    expect(sem(formatarMoedaCompacta(45_000))).toBe("R$ 450");
+    expect(sem(formatarMoedaCompacta(45_050))).toBe("R$ 450,50");
+    expect(sem(formatarMoedaCompacta(0))).toBe("R$ 0");
   });
 });

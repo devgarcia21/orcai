@@ -1,4 +1,8 @@
-import { calcularResumo, type ItemCalculavel } from "@/lib/orcamento/calculos";
+import {
+  calcularResumo,
+  valorCobradoNoPix,
+  type ItemCalculavel,
+} from "@/lib/orcamento/calculos";
 import { nomeDeExibicao } from "@/lib/prestador";
 import type { OrcamentoDocumento, Prestador } from "@/lib/types/database";
 
@@ -55,7 +59,7 @@ export function pixDoOrcamento({
     orcamento.percentual_sinal,
   );
   const usarSinal = resumo.percentualSinal > 0;
-  const valorCentavos = usarSinal ? resumo.sinal : resumo.total;
+  const valorCentavos = valorCobradoNoPix(resumo);
   if (valorCentavos <= 0) return { disponivel: false, motivo: "Não há valor a pagar." };
 
   const brcode = gerarBrCode({

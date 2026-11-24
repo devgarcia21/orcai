@@ -46,7 +46,7 @@ src/
     page.tsx                # landing
     (auth)/login, cadastro  # telas públicas de autenticação
     auth/callback/route.ts  # destino do link de confirmação de e-mail
-    painel/                 # área logada: layout (cabeçalho + navegação), error, not-found
+    painel/                 # área logada: layout, error, not-found; page.tsx = painel de métricas
       clientes/ [id]/       # lista com busca; detalhes + orçamentos do cliente
       orcamentos/ novo/ [id]/ [id]/editar/
       orcamentos/[id]/pdf/route.ts  # PDF do orçamento (Route Handler)
@@ -58,6 +58,7 @@ src/
     formulario/             # Campo, CampoBase, BotaoEnviar, MensagemFormulario,
                             # InputMoeda, SelectNativo, Secao
     painel/esqueletos.tsx   # esqueletos de carregamento, no formato de cada conteúdo
+    painel/                 # métricas: FiltroPeriodo, Indicadores, GraficoAprovado, FunilPeriodo, PrecisaAtencao
     clientes/ orcamentos/ painel/ perfil/ auth/   # componentes por domínio
     pix/                    # QrCode (SVG) e BlocoPagamentoPix (cliente e painel)
     publico/                # página do cliente: resposta, visualização, PIX, status
@@ -66,7 +67,8 @@ src/
   hooks/use-ditado.ts       # ditado por voz (Web Speech API, pt-BR)
   lib/
     orcamento/calculos.ts   # ⭐ ÚNICA fonte dos cálculos (tela e servidor) + testes
-    orcamento/regras.ts     # status, transições, unidades, numeração #0001
+    orcamento/regras.ts     # status, transições, unidades, numeração #0001, statusExibicao (Vencido)
+    metricas/               # ⭐ métricas do painel (puro + testes): periodo, calcular, formatar
     moeda.ts datas.ts       # R$ e datas pt-BR (+ testes)
     busca.ts                # busca sem acento
     pdf/                    # documento react-pdf, geração, nome do arquivo, fontes Inter (+ testes)
@@ -81,7 +83,7 @@ src/
       gerar-itens.ts        #   orquestra: valida, limite, histórico, IA, normaliza (dependências injetadas)
       prompt.ts             #   instruções de sistema + JSON Schema + entrada (texto como dado)
       resposta.ts           #   validação zod item a item + regra do preço só do histórico
-      historico.ts unidades.ts limite.ts aplicar.ts
+      historico.ts unidades.ts limite.ts aplicar.ts precos-texto.ts
     whatsapp.ts             # telefone → wa.me, link com mensagem, textos padrão (+ testes)
     envio-orcamento.ts      # monta link público + link do WhatsApp (servidor)
     url-app.ts              # base dos links (NEXT_PUBLIC_APP_URL) · copiar.ts (clipboard)
@@ -306,10 +308,11 @@ fallback={<Esqueleto/>}><Dados params={params}/></Suspense></> }`. Nunca faça `
   (`SCHEMA_RESPOSTA_IA`, unidades em `enum`). Mesmo assim tudo passa por zod
   (`normalizarResposta`): formato geral errado → "resposta inválida"; item ruim → descartado
   com aviso; repetidos são juntados; unidades por sinônimo (`normalizarUnidade`).
-- ⭐ **A IA nunca define preço**: ela aponta `indice_historico`; o servidor usa o valor DO
+- ⭐ **A IA nunca inventa preço**: ela aponta `indice_historico`; o servidor usa o valor DO
   HISTÓRICO (não o número que a IA escreveu) só se a unidade bate e há palavra em comum, ou se
   a descrição é idêntica (sem acento) à de um item do histórico. Senão `null` → "Defina o
-  valor" (destacado na prévia e no editor, `valorPendente`). Preço citado no texto é ignorado.
+  valor" (destacado na prévia e no editor, `valorPendente`). Na Etapa 7 entrou o preço escrito
+  pelo prestador (ver abaixo).
 - **Histórico**: itens dos 40 orçamentos mais recentes; `selecionarHistorico` tira valor 0 e
   repetidos (fica o mais recente), prioriza palavras em comum com o pedido, máximo 50.
 - **Injeção de prompt**: instruções de sistema fixas; o texto do prestador vai dentro de um JSON
@@ -334,6 +337,52 @@ fallback={<Esqueleto/>}><Dados params={params}/></Suspense></> }`. Nunca faça `
   histórico); o SDK é mockado em `gemini.test.ts`. Verificado também no navegador com o Gemini
   real + Supabase falso (texto, voz simulada, com/sem histórico, prévia, limite, sem chave).
 
+### Painel de métricas e preço no texto (Etapa 7)
+
+- **Módulo puro** `lib/metricas`: `calcularPeriodo` (7/30/90 dias terminando hoje, ou "Este
+  mês" do dia 1 até hoje vs. o mesmo trecho do mês passado, limitado ao fim do mês),
+  `calcularMetricas` (todos os indicadores, gráfico, funil e atenção) e `formatar` (textos
+  "+18% vs. …"). Totais SEMPRE por `calculos.ts`; o valor do sinal pela mesma regra do PIX
+  (`valorCobradoNoPix`: sinal, ou o total se o sinal for 0%).
+- **Datas em São Paulo**: tudo é comparado como "AAAA-MM-DD" do fuso de São Paulo
+  (`dataNoBrasil`), intervalos inclusivos. A consulta usa `inicioDoDiaNoBrasil` (meia-noite em SP
+  → UTC, com 1 dia de folga) e a classificação fina fica no módulo.
+- **Definições**: valor aprovado e taxa usam o dia da resposta (`respondido_em`, ou
+  `created_at` em orçamentos antigos); sinais recebidos, `sinal_recebido_em`. "A receber" e
+  "Aguardando resposta" são **saldos do momento**: a comparação é com o saldo na véspera do
+  período, reconstruído pelas datas dos eventos ("vs. 30 dias atrás"). Vencidos não contam como
+  aguardando. Comparação com anterior zero → "Antes era zero" (nunca divide por zero); taxa
+  sem respostas → "—" e comparação em pontos percentuais.
+- **Funil**: orçamentos CRIADOS no período. Enviado = saiu do rascunho; visualizado =
+  `visualizado_em` ou houve resposta (aprovação manual implica que o cliente viu) — assim o
+  funil nunca cresce de uma etapa para a outra.
+- **Consulta enxuta** (`listarOrcamentosParaMetricas`): eventos desde o início do período
+  anterior ou do gráfico de 6 meses (o que vier antes) + os pendentes de qualquer data (enviados
+  e aprovados sem sinal), via `.or(...)`, com RLS e filtro do prestador. Conta nova
+  (`possuiOrcamentoEnviado`, count head) → estado vazio.
+- **Filtro na URL** (`?periodo=7d|30d|90d|mes`, padrão sem parâmetro): `<Link>`s comuns,
+  dá para compartilhar e o voltar funciona; valor inválido → 30 dias. Filtro e métricas em
+  `<Suspense>` separados (o filtro tem fallback sem item marcado).
+- **Gráfico** em HTML/CSS (sem biblioteca): barras com rótulo compacto (`formatarMoedaCompacta`
+  → "R$ 1,5 mil"), mês atual destacado, desenho `aria-hidden` + tabela `sr-only` com os valores.
+- **Atenção**: sem resposta há MAIS de 72 h (só dentro da validade), vencem em até 3 dias
+  (hoje incluído), aprovados sem sinal; até 5 por grupo + "e mais N". "Lembrar pelo WhatsApp"
+  usa `mensagemLembreteOrcamento` e só aparece se houver link público (token).
+- **"Vencido"** é só exibição (`statusExibicao`): enviado com validade passada. Calculado no
+  servidor (`OrcamentoResumo.status_exibicao`, com `hojeISO()` depois dos dados), usado nos
+  badges, no detalhe e como filtro da lista (o chip só aparece se houver algum).
+- **Preço escrito no texto (IA)**: prioridade texto → histórico → vazio. A IA devolve
+  `valor_informado_centavos` + `valor_informado_tipo` ("unitario" ou "total"; total é
+  dividido pela quantidade, com aviso se arredondar). O servidor só aceita se o número
+  **aparece no texto** (`valoresNoTexto`: "150", "20,50", "1.500", "1,5 mil"…) — a IA continua
+  sem conseguir inventar preço. Dica na prévia: "Valor informado por você". Números por extenso
+  ("cento e cinquenta") não são reconhecidos.
+- ⚠️ **Schema do Gemini simples**: com os campos novos, `minimum`/`maxItems` deixaram o schema
+  "complexo demais" (HTTP 400 INVALID_ARGUMENT). Os limites ficam só no zod; um teste impede a volta.
+- Verificado: 46 testes de métricas; Gemini real ("3 tomadas a 20 reais cada" e "por 60 reais"
+  → R$ 20,00; sem preço → histórico); navegador com Supabase falso (indicadores conferidos à mão,
+  funil, gráfico, atenção, lembrete, troca de período/voltar, Vencido, conta nova).
+
 ## Convenções
 
 - Mensagens de erro em português, claras e acionáveis ("Digite um telefone válido com DDD").
@@ -356,5 +405,5 @@ fallback={<Esqueleto/>}><Dados params={params}/></Suspense></> }`. Nunca faça `
 - [x] **Etapa 4** — Link público com aprovar/recusar e envio por WhatsApp
 - [x] **Etapa 5** — QR Code PIX estático do sinal
 - [x] **Etapa 6** — IA que transforma texto ou voz em itens de orçamento
-- [ ] **Etapa 7** — Painel com métricas
+- [x] **Etapa 7** — Painel com métricas (+ preço escrito no texto da IA)
 - [ ] **Etapa 8** — README final, testes e deploy

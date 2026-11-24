@@ -275,3 +275,47 @@ export function EsqueletoDetalheCliente() {
     </Carregando>
   );
 }
+
+/** Painel de métricas: 5 cartões, gráfico + funil e "Precisa da sua atenção". */
+export function EsqueletoMetricas() {
+  return (
+    <Carregando className="grid gap-6">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        {Array.from({ length: 5 }, (_, i) => (
+          <Card
+            key={i}
+            size="sm"
+            className={i === 0 ? "col-span-2 lg:col-span-1" : undefined}
+          >
+            <CardContent className="grid gap-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-7 w-28" />
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-3 w-full" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <Card>
+          <CardContent className="grid gap-4">
+            <Skeleton className="h-5 w-48" />
+            <Skeleton className="h-56 w-full rounded-xl" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="grid gap-4">
+            <Skeleton className="h-5 w-36" />
+            {Array.from({ length: 4 }, (_, i) => (
+              <Skeleton key={i} className="h-8 w-full" />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+      <div className="grid gap-3">
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-24 w-full rounded-xl" />
+      </div>
+    </Carregando>
+  );
+}

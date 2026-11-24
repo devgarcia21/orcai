@@ -68,3 +68,23 @@ export function clientePodeResponder(
 export function podeEnviar(status: StatusOrcamento): boolean {
   return status === "rascunho" || status === "enviado";
 }
+
+/**
+ * Status mostrado na tela: um orçamento ENVIADO com a validade vencida aparece
+ * como "Vencido". É só exibição — o banco continua com "enviado".
+ */
+export type StatusExibicao = StatusOrcamento | "vencido";
+
+export const ROTULOS_STATUS_EXIBICAO: Record<StatusExibicao, string> = {
+  ...ROTULOS_STATUS,
+  vencido: "Vencido",
+};
+
+export function statusExibicao(
+  orcamento: { status: StatusOrcamento; valido_ate: string | null },
+  hoje: string,
+): StatusExibicao {
+  return orcamento.status === "enviado" && orcamentoVencido(orcamento.valido_ate, hoje)
+    ? "vencido"
+    : orcamento.status;
+}

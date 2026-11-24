@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useDitado } from "@/hooks/use-ditado";
 import { ESTADO_INICIAL, type EstadoAcao } from "@/lib/acoes";
 import { TEXTO_MAXIMO_IA } from "@/lib/ia/limite";
-import type { ItemSugerido } from "@/lib/ia/resposta";
+import type { ItemSugerido, OrigemValor } from "@/lib/ia/resposta";
 import { formatarQuantidade, lerQuantidade } from "@/lib/moeda";
 import { ROTULOS_UNIDADE } from "@/lib/orcamento/regras";
 import { UNIDADES_ITEM, type UnidadeItem } from "@/lib/types/database";
@@ -33,13 +33,20 @@ type ItemRevisao = {
   unidade: UnidadeItem;
   /** `null` = sem valor no histórico → "Defina o valor". */
   valor: number | null;
+  /** De onde veio o valor (some quando o prestador edita). */
+  origem: OrigemValor;
 };
 
 type Revisao = Pick<SugestaoGerada, "titulo" | "avisos" | "itensNoHistorico"> & {
   itens: ItemRevisao[];
 };
 
-export type ItemParaAdicionar = Omit<ItemRevisao, "chave" | "incluir">;
+export type ItemParaAdicionar = Omit<ItemRevisao, "chave" | "incluir" | "origem">;
+
+const DICAS_ORIGEM: Record<Exclude<OrigemValor, null>, string> = {
+  informado: "Valor informado por você",
+  historico: "Do seu histórico de preços",
+};
 
 type Props = {
   /** false quando não há GEMINI_API_KEY: o bloco aparece desativado. */
@@ -59,6 +66,7 @@ function paraRevisao(item: ItemSugerido): ItemRevisao {
     quantidade: formatarQuantidade(item.quantidade).replace(/\./g, ""),
     unidade: item.unidade,
     valor: item.valor_unitario_centavos,
+    origem: item.origem_valor,
   };
 }
 
@@ -264,8 +272,8 @@ export function MontarComIA({ disponivel, aoAdicionar }: Props) {
               </h3>
               <p className="text-sm text-muted-foreground">
                 {revisao.itensNoHistorico === 0
-                  ? "Você ainda não tem itens com valor em orçamentos anteriores: defina os valores destacados."
-                  : "Os valores só são preenchidos quando o item já existe no seu histórico de preços."}{" "}
+                  ? "Você ainda não tem itens com valor em orçamentos anteriores: os valores vêm só do que você escreveu no texto. Defina os destacados."
+                  : "Valores vêm do que você escreveu no texto ou do seu histórico de preços."}{" "}
                 Edite, remova ou desmarque o que não quiser.
               </p>
               {revisao.avisos.map((aviso) => (
@@ -363,7 +371,11 @@ export function MontarComIA({ disponivel, aoAdicionar }: Props) {
                         rotulo="Valor unitário"
                         className="col-span-2 sm:col-span-1"
                         dica={
-                          pendente ? <AvisoDefinaValor /> : "Do seu histórico de preços"
+                          pendente ? (
+                            <AvisoDefinaValor />
+                          ) : item.origem ? (
+                            DICAS_ORIGEM[item.origem]
+                          ) : undefined
                         }
                       >
                         {(aria) => (
@@ -372,6 +384,7 @@ export function MontarComIA({ disponivel, aoAdicionar }: Props) {
                             aoMudar={(centavos) =>
                               atualizar(item.chave, {
                                 valor: centavos > 0 ? centavos : null,
+                                origem: null,
                               })
                             }
                             className={cn(

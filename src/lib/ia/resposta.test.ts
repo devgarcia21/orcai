@@ -43,12 +43,14 @@ describe("normalizarResposta: validação", () => {
         quantidade: 3,
         unidade: "un",
         valor_unitario_centavos: null,
+        origem_valor: null,
       },
       {
         descricao: "Passagem de fio",
         quantidade: 10,
         unidade: "m",
         valor_unitario_centavos: null,
+        origem_valor: null,
       },
     ]);
     expect(r.avisos).toEqual([]);

@@ -70,7 +70,7 @@ export function TabelaOrcamentos({ orcamentos, ocultarCliente }: Props) {
                   )}
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <BadgeStatus status={o.status} />
+                  <BadgeStatus status={o.status_exibicao} />
                   <IndicadorAndamento orcamento={o} />
                 </div>
               </div>
@@ -121,7 +121,7 @@ export function TabelaOrcamentos({ orcamentos, ocultarCliente }: Props) {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <BadgeStatus status={o.status} />
+                    <BadgeStatus status={o.status_exibicao} />
                     <IndicadorAndamento orcamento={o} />
                   </div>
                 </td>

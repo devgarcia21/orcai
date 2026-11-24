@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   mensagemContatoPrestador,
   mensagemEnvioOrcamento,
+  mensagemLembreteOrcamento,
   montarLinkWhatsApp,
   normalizarTelefoneWhatsApp,
 } from "./whatsapp";
@@ -116,6 +117,30 @@ describe("mensagemContatoPrestador", () => {
   it("menciona o número e o título", () => {
     expect(mensagemContatoPrestador("0007", "Reforma")).toBe(
       "Olá! Vi o orçamento Nº 0007 – Reforma e gostaria de conversar.",
+    );
+  });
+});
+
+describe("mensagemLembreteOrcamento", () => {
+  it("pergunta com educação se o cliente viu o orçamento e manda o link", () => {
+    expect(
+      mensagemLembreteOrcamento({
+        nomeCliente: "Maria Souza",
+        numero: "0007",
+        titulo: "Reforma elétrica",
+        link: "https://orcai.app/o/abc",
+        assinatura: "Ana Elétrica",
+      }),
+    ).toBe(
+      [
+        "Olá, Maria! Tudo bem?",
+        "",
+        "Conseguiu ver o orçamento Nº 0007 – Reforma elétrica? Se tiver qualquer dúvida, é só me chamar.",
+        "",
+        "https://orcai.app/o/abc",
+        "",
+        "Ana Elétrica",
+      ].join("\n"),
     );
   });
 });

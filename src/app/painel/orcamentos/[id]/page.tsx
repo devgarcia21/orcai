@@ -65,7 +65,7 @@ async function DetalheOrcamento({ params }: { params: Params }) {
         descricao={
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
             <span className="font-medium text-foreground tabular-nums">{numero}</span>
-            <BadgeStatus status={orcamento.status} />
+            <BadgeStatus status={vencido ? "vencido" : orcamento.status} />
             <span>Criado em {formatarData(orcamento.created_at)}</span>
             {orcamento.valido_ate && (
               <span className={vencido ? "font-medium text-amber-700" : undefined}>

@@ -66,3 +66,48 @@ export function formatarDataHora(timestamp: string): string {
   const data = new Date(timestamp);
   return `${formatadorDataHora.format(data)} às ${formatadorHora.format(data)}`;
 }
+
+/** Data ("AAAA-MM-DD") de um timestamp no fuso de São Paulo. */
+export function dataNoBrasil(timestamp: string | Date): string {
+  return formatadorDiaBrasil.format(new Date(timestamp));
+}
+
+/** Diferença, em minutos, entre o horário de São Paulo e o UTC num instante. */
+function deslocamentoBrasilMinutos(instante: Date): number {
+  const partes = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: FUSO_BRASIL,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+      .formatToParts(instante)
+      .map((p) => [p.type, p.value]),
+  );
+  const comoUtc = Date.UTC(
+    Number(partes.year),
+    Number(partes.month) - 1,
+    Number(partes.day),
+    Number(partes.hour),
+    Number(partes.minute),
+  );
+  return Math.round((comoUtc - instante.getTime()) / 60_000);
+}
+
+/**
+ * Instante (ISO UTC) da meia-noite de uma data em São Paulo.
+ * "2026-11-01" → "2026-11-01T03:00:00.000Z". Respeita horário de verão antigo.
+ */
+export function inicioDoDiaNoBrasil(dataISO: string): string {
+  const [, a, m, d] = DATA_ISO.exec(dataISO) ?? [];
+  if (!a) throw new Error(`Data inválida: ${dataISO}`);
+  const meiaNoiteUtc = Date.UTC(Number(a), Number(m) - 1, Number(d));
+  // Duas passadas: o deslocamento pode mudar perto da meia-noite.
+  let instante =
+    meiaNoiteUtc - deslocamentoBrasilMinutos(new Date(meiaNoiteUtc)) * 60_000;
+  instante = meiaNoiteUtc - deslocamentoBrasilMinutos(new Date(instante)) * 60_000;
+  return new Date(instante).toISOString();
+}

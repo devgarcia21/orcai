@@ -109,9 +109,12 @@ export type OrcamentoResumo = Pick<
   | "cliente_id"
   | "visualizado_em"
   | "sinal_recebido_em"
+  | "valido_ate"
 > & {
   cliente_nome: string;
   total_centavos: number;
+  /** "vencido" quando enviado e fora da validade (só exibição; calculado no servidor). */
+  status_exibicao: StatusOrcamento | "vencido";
 };
 
 /** Cliente com a quantidade de orçamentos (para bloquear a exclusão). */

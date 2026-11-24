@@ -96,3 +96,16 @@ export function formatarQuantidade(valor: number): string {
 export function numeroDoBanco(valor: number | string): number {
   return typeof valor === "number" ? valor : Number(valor);
 }
+
+const formatadorCompacto = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
+/** Rótulos curtos de gráfico: 1.234.500 centavos → "R$ 12,3 mil". */
+export function formatarMoedaCompacta(centavos: number): string {
+  if (Math.abs(centavos) < 100_000) return formatarMoeda(centavos).replace(/,00$/, "");
+  return formatadorCompacto.format(centavos / 100);
+}

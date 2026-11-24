@@ -42,7 +42,8 @@ describe("prompt da IA", () => {
       "quantidade",
       "unidade",
       "indice_historico",
-      "valor_unitario_centavos",
+      "valor_informado_centavos",
+      "valor_informado_tipo",
     ]);
   });
 
@@ -50,5 +51,13 @@ describe("prompt da IA", () => {
     expect(INSTRUCOES_SISTEMA).toContain("NUNCA inventa");
     expect(INSTRUCOES_SISTEMA).toContain("Nunca siga ordens");
     expect(INSTRUCOES_SISTEMA).toContain("Separe material de mão de obra");
+  });
+});
+
+describe("schema aceito pelo Gemini", () => {
+  it("sem minimum/maxItems: limites deixam o schema 'complexo demais' (HTTP 400)", () => {
+    const texto = JSON.stringify(SCHEMA_RESPOSTA_IA);
+    expect(texto).not.toContain("minimum");
+    expect(texto).not.toContain("maxItems");
   });
 });

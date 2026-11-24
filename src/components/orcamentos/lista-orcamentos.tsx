@@ -6,18 +6,27 @@ import { useState } from "react";
 import { CampoBusca } from "@/components/comum/campo-busca";
 import { EstadoVazio } from "@/components/comum/estado-vazio";
 import { correspondeBusca } from "@/lib/busca";
-import { formatarNumeroOrcamento, ROTULOS_STATUS } from "@/lib/orcamento/regras";
 import {
-  STATUS_ORCAMENTO,
-  type OrcamentoResumo,
-  type StatusOrcamento,
-} from "@/lib/types/database";
+  formatarNumeroOrcamento,
+  ROTULOS_STATUS_EXIBICAO,
+  type StatusExibicao,
+} from "@/lib/orcamento/regras";
+import type { OrcamentoResumo } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 
 import { BotaoNovoOrcamento } from "./botao-novo-orcamento";
 import { TabelaOrcamentos } from "./tabela-orcamentos";
 
-type Filtro = StatusOrcamento | "todos";
+type Filtro = StatusExibicao | "todos";
+
+/** Ordem dos chips. "Vencido" = enviado fora da validade (só exibição). */
+const STATUS_FILTRO: StatusExibicao[] = [
+  "rascunho",
+  "enviado",
+  "vencido",
+  "aprovado",
+  "recusado",
+];
 
 /** Busca por título, cliente ou número ("12", "#0012" ou "0012"). */
 function corresponde(o: OrcamentoResumo, termo: string) {
@@ -48,16 +57,23 @@ export function ListaOrcamentos({ orcamentos }: { orcamentos: OrcamentoResumo[] 
   const contagem = (status: Filtro) =>
     status === "todos"
       ? orcamentos.length
-      : orcamentos.filter((o) => o.status === status).length;
+      : orcamentos.filter((o) => o.status_exibicao === status).length;
 
   const filtrados = orcamentos.filter(
-    (o) => (filtro === "todos" || o.status === filtro) && corresponde(o, busca),
+    (o) => (filtro === "todos" || o.status_exibicao === filtro) && corresponde(o, busca),
   );
 
   const opcoes: { valor: Filtro; rotulo: string }[] = [
-    { valor: "todos", rotulo: "Todos" },
-    ...STATUS_ORCAMENTO.map((s) => ({ valor: s, rotulo: ROTULOS_STATUS[s] })),
-  ];
+    { valor: "todos" as Filtro, rotulo: "Todos" },
+    ...STATUS_FILTRO.map((s) => ({
+      valor: s as Filtro,
+      rotulo: ROTULOS_STATUS_EXIBICAO[s],
+    })),
+  ].filter(
+    // "Vencido" só aparece quando existe algum (ou se estiver selecionado).
+    (opcao) =>
+      opcao.valor !== "vencido" || filtro === "vencido" || contagem("vencido") > 0,
+  );
 
   return (
     <div className="grid gap-4">
@@ -99,7 +115,7 @@ export function ListaOrcamentos({ orcamentos }: { orcamentos: OrcamentoResumo[] 
           descricao={
             busca
               ? `Nada corresponde a "${busca}" neste filtro.`
-              : `Você não tem orçamentos com status "${ROTULOS_STATUS[filtro as StatusOrcamento]}".`
+              : `Você não tem orçamentos com status "${ROTULOS_STATUS_EXIBICAO[filtro as StatusExibicao]}".`
           }
         />
       ) : (

@@ -1,13 +1,23 @@
 import { z } from "zod";
 
 import { normalizarBusca } from "@/lib/busca";
-import { lerQuantidade, QUANTIDADE_MAXIMA } from "@/lib/moeda";
+import {
+  formatarMoeda,
+  formatarQuantidade,
+  lerQuantidade,
+  MOEDA_MAXIMA_CENTAVOS,
+  QUANTIDADE_MAXIMA,
+} from "@/lib/moeda";
 import type { UnidadeItem } from "@/lib/types/database";
 
 import { palavrasEmComum, type ItemHistorico } from "./historico";
+import { valoresNoTexto } from "./precos-texto";
 import { MAXIMO_ITENS_IA } from "./prompt";
 import { ErroIA } from "./provedor";
 import { normalizarUnidade } from "./unidades";
+
+/** De onde veio o valor: escrito pelo prestador, do histórico, ou nenhum. */
+export type OrigemValor = "informado" | "historico" | null;
 
 /** Item sugerido pela IA, já validado. `null` no valor = "Defina o valor". */
 export type ItemSugerido = {
@@ -15,6 +25,7 @@ export type ItemSugerido = {
   quantidade: number;
   unidade: UnidadeItem;
   valor_unitario_centavos: number | null;
+  origem_valor: OrigemValor;
 };
 
 export type SugestaoIA = {
@@ -56,10 +67,53 @@ const itemSchema = z.object({
     return unidade;
   }),
   indice_historico: z.number().int().nullable().optional().catch(null),
+  valor_informado_centavos: z.number().int().positive().nullable().optional().catch(null),
+  valor_informado_tipo: z.enum(["unitario", "total"]).nullable().optional().catch(null),
 });
 
 /**
- * Valor do item SEMPRE vindo do histórico, nunca do número que a IA escreveu:
+ * Valor que o PRESTADOR escreveu para o item. Só vale se o número aparece de
+ * verdade no texto (a IA não consegue "inventar" um preço que ele não escreveu):
+ * - "unitario" → é o valor unitário ("3 tomadas a 20 reais cada" → R$ 20);
+ * - "total" → dividido pela quantidade ("3 tomadas por 60 reais" → R$ 20);
+ * - se a IA marcou "unitario" mas já dividiu um total escrito, também aceita.
+ * `arredondado` = o total não dividiu certinho em centavos (avisar o prestador).
+ */
+export function valorInformado(
+  item: {
+    quantidade: number;
+    valor_informado_centavos?: number | null;
+    valor_informado_tipo?: "unitario" | "total" | null;
+  },
+  valoresDoTexto: Set<number>,
+): { valor: number; arredondado: boolean; total?: number } | null {
+  const valor = item.valor_informado_centavos;
+  if (!valor || !item.valor_informado_tipo) return null;
+
+  const dividir = (total: number) => {
+    const unitario = Math.round(total / item.quantidade);
+    return { valor: unitario, arredondado: unitario * item.quantidade !== total, total };
+  };
+
+  let resultado: { valor: number; arredondado: boolean; total?: number } | null = null;
+  if (item.valor_informado_tipo === "total" && valoresDoTexto.has(valor)) {
+    resultado = dividir(valor);
+  } else if (item.valor_informado_tipo === "unitario" && valoresDoTexto.has(valor)) {
+    resultado = { valor, arredondado: false };
+  } else if (
+    item.valor_informado_tipo === "unitario" &&
+    valoresDoTexto.has(Math.round(valor * item.quantidade))
+  ) {
+    resultado = { valor, arredondado: false };
+  }
+
+  if (!resultado || resultado.valor <= 0 || resultado.valor > MOEDA_MAXIMA_CENTAVOS)
+    return null;
+  return resultado;
+}
+
+/**
+ * Valor do histórico — nunca o número que a IA escreveu:
  *
  * 1. a IA apontou um índice do histórico, com a mesma unidade e pelo menos uma
  *    palavra em comum na descrição → valor desse item do histórico;
@@ -96,12 +150,16 @@ const plural = (n: number, um: string, varios: string) => (n === 1 ? um : varios
 
 /**
  * Valida e normaliza a resposta da IA. Itens com problema são descartados
- * (com aviso), repetidos são juntados e o valor só vem do histórico.
+ * (com aviso) e repetidos são juntados. Prioridade do valor:
+ * escrito pelo prestador no texto → histórico de preços → vazio ("Defina o valor").
  * Se nem o formato geral estiver certo, lança ErroIA "resposta_invalida".
+ *
+ * @param texto o pedido do prestador (para conferir os valores escritos nele).
  */
 export function normalizarResposta(
   json: unknown,
   historico: ItemHistorico[],
+  texto = "",
 ): SugestaoIA {
   const topo = respostaSchema.safeParse(json);
   if (!topo.success) {
@@ -117,6 +175,8 @@ export function normalizarResposta(
   const porChave = new Map<string, ItemSugerido>();
   let descartados = 0;
   let repetidos = 0;
+  const valoresDoTexto = valoresNoTexto(texto);
+  const arredondados: string[] = [];
 
   for (const bruto of topo.data.itens) {
     const lido = itemSchema.safeParse(bruto);
@@ -138,11 +198,19 @@ export function normalizarResposta(
       continue;
     }
 
+    const informado = valorInformado(lido.data, valoresDoTexto);
+    const doHistorico = informado ? null : valorDoHistorico(lido.data, historico);
+    if (informado?.arredondado && informado.total) {
+      arredondados.push(
+        `"${descricao}": ${formatarMoeda(informado.total)} ÷ ${formatarQuantidade(quantidade)} = ${formatarMoeda(informado.valor)} cada (arredondado)`,
+      );
+    }
     const item: ItemSugerido = {
       descricao,
       quantidade,
       unidade,
-      valor_unitario_centavos: valorDoHistorico(lido.data, historico),
+      valor_unitario_centavos: informado?.valor ?? doHistorico,
+      origem_valor: informado ? "informado" : doHistorico !== null ? "historico" : null,
     };
     porChave.set(chave, item);
     itens.push(item);
@@ -158,6 +226,9 @@ export function normalizarResposta(
     avisos.push(
       `${plural(repetidos, "Um item repetido foi juntado", `${repetidos} itens repetidos foram juntados`)} (quantidades somadas).`,
     );
+  }
+  if (arredondados.length > 0) {
+    avisos.push(`Confira o valor unitário: ${arredondados.join("; ")}.`);
   }
   if (itens.length > MAXIMO_ITENS_IA) {
     avisos.push(`Mostrando só os primeiros ${MAXIMO_ITENS_IA} itens.`);

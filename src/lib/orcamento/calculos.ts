@@ -80,3 +80,11 @@ export function calcularResumo(
     percentualSinal: percentual,
   };
 }
+
+/**
+ * Valor cobrado no PIX do orçamento aprovado: o sinal ou, com sinal de 0%, o
+ * total. É o que o prestador marca como "Sinal recebido" (PIX e métricas).
+ */
+export function valorCobradoNoPix(resumo: ResumoOrcamento): number {
+  return resumo.percentualSinal > 0 ? resumo.sinal : resumo.total;
+}

@@ -2,8 +2,10 @@ import "server-only";
 
 import { cache } from "react";
 
+import { hojeISO } from "@/lib/datas";
 import { numeroDoBanco } from "@/lib/moeda";
 import { calcularResumo } from "@/lib/orcamento/calculos";
+import { statusExibicao } from "@/lib/orcamento/regras";
 import { createClient } from "@/lib/supabase/server";
 import type {
   Cliente,
@@ -31,6 +33,7 @@ type LinhaListagem = Pick<
   | "percentual_sinal"
   | "visualizado_em"
   | "sinal_recebido_em"
+  | "valido_ate"
 > & {
   cliente: { nome: string } | null;
   itens: { quantidade: number | string; valor_unitario_centavos: number }[];
@@ -40,7 +43,7 @@ type LinhaListagem = Pick<
  * O total não é guardado no banco: é sempre derivado dos itens pelo módulo
  * de cálculos, para nunca existir um "total" divergente dos itens.
  */
-function paraResumo(linha: LinhaListagem): OrcamentoResumo {
+function paraResumo(linha: LinhaListagem, hoje: string): OrcamentoResumo {
   const itens = linha.itens.map((i) => ({
     quantidade: numeroDoBanco(i.quantidade),
     valor_unitario_centavos: i.valor_unitario_centavos,
@@ -59,13 +62,15 @@ function paraResumo(linha: LinhaListagem): OrcamentoResumo {
     cliente_id: linha.cliente_id,
     visualizado_em: linha.visualizado_em,
     sinal_recebido_em: linha.sinal_recebido_em,
+    valido_ate: linha.valido_ate,
+    status_exibicao: statusExibicao(linha, hoje),
     cliente_nome: linha.cliente?.nome ?? "Cliente removido",
     total_centavos: total,
   };
 }
 
 const COLUNAS_LISTAGEM =
-  "id, numero, titulo, status, created_at, cliente_id, desconto_centavos, percentual_sinal, visualizado_em, sinal_recebido_em, cliente:clientes(nome), itens:itens_orcamento(quantidade, valor_unitario_centavos)";
+  "id, numero, titulo, status, created_at, cliente_id, desconto_centavos, percentual_sinal, visualizado_em, sinal_recebido_em, valido_ate, cliente:clientes(nome), itens:itens_orcamento(quantidade, valor_unitario_centavos)";
 
 /**
  * Orçamentos do prestador, do mais recente para o mais antigo.
@@ -94,7 +99,9 @@ export const listarOrcamentos = cache(
       { merge: false }
     >();
     if (error) throw new Error("Não foi possível carregar os orçamentos.");
-    return (data ?? []).map(paraResumo);
+    // "Hoje" calculado depois dos dados (no servidor), para o status "Vencido".
+    const hoje = hojeISO();
+    return (data ?? []).map((linha) => paraResumo(linha, hoje));
   },
 );
 

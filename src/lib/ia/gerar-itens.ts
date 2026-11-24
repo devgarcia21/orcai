@@ -80,7 +80,7 @@ export async function gerarItens(
     tokensEntrada = resposta.tokensEntrada;
     tokensSaida = resposta.tokensSaida;
 
-    const sugestao = normalizarResposta(resposta.json, historico);
+    const sugestao = normalizarResposta(resposta.json, historico, lido.data);
     await concluir(true);
 
     if (sugestao.itens.length === 0) {

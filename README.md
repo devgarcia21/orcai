@@ -6,7 +6,7 @@ O Orçaí é um SaaS para prestadores de serviço brasileiros (eletricistas, enc
 pedreiros, oficinas) criarem orçamentos bonitos e claros direto do celular, enviarem ao
 cliente pelo WhatsApp e receberem o sinal por PIX.
 
-> 🚧 Em construção. Etapa atual: **6 — montar orçamentos com IA (texto ou voz)**.
+> 🚧 Em construção. Etapa atual: **7 — painel com métricas**.
 
 ## O que já funciona
 
@@ -24,6 +24,10 @@ cliente pelo WhatsApp e receberem o sinal por PIX.
   com o valor do sinal (ou do total, se o sinal for 0%); o QR também sai no PDF
 - **Montar com IA**: descreva (ou dite) o serviço — "trocar 3 tomadas e instalar um chuveiro" —
   e a IA sugere os itens com unidade e quantidade; você revisa e adiciona ao orçamento
+- **Painel com métricas** no Início: valor aprovado, sinais a receber e recebidos, taxa de
+  aprovação e orçamentos aguardando resposta (com comparação com o período anterior), gráfico
+  dos últimos 6 meses, funil e uma lista do que precisa de atenção — com lembrete pelo WhatsApp
+- Orçamentos enviados com a validade vencida aparecem como "Vencido"
 
 ## Sobre o pagamento por PIX
 
@@ -39,9 +43,10 @@ cobranças PIX dinâmicas e confirmar o pagamento automaticamente via webhook.
 
 O bloco **Montar com IA** usa a API do Google Gemini (plano gratuito), só no servidor.
 
-- **A IA nunca inventa preço.** Ela recebe como referência até 50 itens que você já usou em
-  orçamentos anteriores e só indica qual deles corresponde a cada item; o valor vem do seu
-  histórico. Sem correspondência, o campo fica vazio e destacado com "Defina o valor".
+- **A IA nunca inventa preço.** O valor vem, nesta ordem: do preço que **você escreveu** no
+  texto ("chuveiro por 150 reais", "3 tomadas a 20 reais cada"), do seu **histórico** (até 50
+  itens de orçamentos anteriores) ou fica vazio, destacado com "Defina o valor". Um preço só é
+  aceito se o número realmente estiver no seu texto ou no histórico.
 - A resposta vem em JSON com schema e é validada antes de aparecer; nada é salvo sozinho.
 - Limites: 30 gerações por hora por prestador e textos de até 1.500 caracteres.
 - O ditado usa o reconhecimento de voz do navegador (Chrome, Edge, Safari) e só aparece em
@@ -122,6 +127,9 @@ Postgres, Storage) · Google Gemini · zod · Server Actions · React PDF · Vit
 - **Gerador de PIX próprio e testado**: o "Pix Copia e Cola" (formato EMV + CRC16) reproduz
   byte a byte o exemplo oficial do Banco Central, e um teste decodifica o QR Code desenhado
   com um leitor independente (jsQR) para garantir que ele é legível.
+- **Métricas num módulo puro e testado** (`src/lib/metricas`): recebe os orçamentos e devolve
+  todos os indicadores, sempre com o mesmo módulo de cálculos e datas no fuso de São Paulo
+  (inclusive a virada do mês). O filtro de período fica na URL.
 - **IA sem preço inventado e à prova de "ignore as regras"**: o texto do prestador vai como
   dado dentro de um JSON, a resposta é validada item a item com zod e o valor só pode vir do
   histórico de preços do próprio prestador. O limite por hora é conferido no banco antes da chamada.
@@ -137,5 +145,5 @@ Postgres, Storage) · Google Gemini · zod · Server Actions · React PDF · Vit
 4. ✅ Link público com aprovar/recusar e envio por WhatsApp
 5. ✅ QR Code PIX estático do sinal
 6. ✅ IA que transforma texto ou voz em itens de orçamento
-7. Painel com métricas
+7. ✅ Painel com métricas
 8. Testes e deploy

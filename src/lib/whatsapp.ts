@@ -73,3 +73,25 @@ export function mensagemEnvioOrcamento(d: DadosMensagemEnvio): string {
 export function mensagemContatoPrestador(numero: string, titulo: string): string {
   return `Olá! Vi o orçamento Nº ${numero} – ${titulo} e gostaria de conversar.`;
 }
+
+type DadosLembrete = {
+  nomeCliente: string;
+  numero: string; // "0001"
+  titulo: string;
+  link: string;
+  assinatura: string;
+};
+
+/** Lembrete curto e educado para quem ainda não respondeu o orçamento. */
+export function mensagemLembreteOrcamento(d: DadosLembrete): string {
+  const nome = primeiroNome(d.nomeCliente);
+  return [
+    nome ? `Olá, ${nome}! Tudo bem?` : "Olá! Tudo bem?",
+    "",
+    `Conseguiu ver o orçamento Nº ${d.numero} – ${d.titulo}? Se tiver qualquer dúvida, é só me chamar.`,
+    "",
+    d.link,
+    "",
+    d.assinatura,
+  ].join("\n");
+}
