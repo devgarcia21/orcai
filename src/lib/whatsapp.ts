@@ -1,5 +1,5 @@
 import { somenteDigitos } from "@/lib/formatacao";
-import { telefoneValido } from "@/lib/pix";
+import { telefoneValido } from "@/lib/pix/chave";
 
 /**
  * Converte um telefone brasileiro no formato do wa.me: 55 + DDD + número,

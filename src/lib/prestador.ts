@@ -1,10 +1,21 @@
 import type { Prestador } from "@/lib/types/database";
 
-/** Perfil pronto para gerar orçamentos: precisa de telefone e chave PIX. */
+/** O que falta no perfil para enviar orçamentos com PIX (telefone, chave e cidade). */
+export function pendenciasPerfil(
+  prestador: Pick<Prestador, "telefone" | "chave_pix" | "cidade">,
+): string[] {
+  return [
+    !prestador.telefone && "telefone",
+    !prestador.chave_pix && "chave PIX",
+    !prestador.cidade?.trim() && "cidade (obrigatória no QR Code PIX)",
+  ].filter((p): p is string => Boolean(p));
+}
+
+/** Perfil pronto para gerar orçamentos com QR Code PIX. */
 export function perfilCompleto(
-  prestador: Pick<Prestador, "telefone" | "chave_pix">,
+  prestador: Pick<Prestador, "telefone" | "chave_pix" | "cidade">,
 ): boolean {
-  return Boolean(prestador.telefone && prestador.chave_pix);
+  return pendenciasPerfil(prestador).length === 0;
 }
 
 /** Nome exibido no cabeçalho e no PDF: empresa, se houver; senão o nome do prestador. */

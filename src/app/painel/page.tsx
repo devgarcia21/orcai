@@ -13,12 +13,18 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { listarOrcamentos } from "@/lib/dados/orcamentos";
 import { obterPrestadorAtual } from "@/lib/dados/prestador";
-import { perfilCompleto } from "@/lib/prestador";
+import { pendenciasPerfil, perfilCompleto } from "@/lib/prestador";
 import { ROTAS } from "@/lib/rotas";
 
 export const metadata: Metadata = { title: "Painel" };
 
 const QUANTIDADE_RECENTES = 5;
+
+/** ["a", "b", "c"] → "a, b e c" */
+const juntarComE = (itens: string[]) =>
+  itens.length <= 1
+    ? itens.join("")
+    : `${itens.slice(0, -1).join(", ")} e ${itens.at(-1)}`;
 
 async function Saudacao() {
   const prestador = await obterPrestadorAtual();
@@ -30,10 +36,7 @@ async function AvisoPerfil() {
   const prestador = await obterPrestadorAtual();
   if (perfilCompleto(prestador)) return null;
 
-  const faltando = [
-    !prestador.telefone && "telefone",
-    !prestador.chave_pix && "chave PIX",
-  ].filter(Boolean);
+  const faltando = pendenciasPerfil(prestador);
 
   return (
     <Alert className="border-amber-300 bg-amber-50 text-amber-900 *:data-[slot=alert-description]:text-amber-900">
@@ -41,7 +44,7 @@ async function AvisoPerfil() {
       <AlertTitle>Complete seu perfil</AlertTitle>
       <AlertDescription>
         <p>
-          Falta informar {faltando.join(" e ")}. Esses dados aparecem nos orçamentos que
+          Falta informar {juntarComE(faltando)}. Esses dados aparecem nos orçamentos que
           você enviar.
         </p>
         <Link href={ROTAS.perfil} className="font-medium">

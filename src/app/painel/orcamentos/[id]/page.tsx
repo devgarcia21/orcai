@@ -12,6 +12,7 @@ import {
   ItensOrcamento,
 } from "@/components/orcamentos/conteudo-orcamento";
 import { LinhaDoTempo } from "@/components/orcamentos/linha-do-tempo";
+import { PagamentoSinal } from "@/components/orcamentos/pagamento-sinal";
 import { ResumoValores } from "@/components/orcamentos/resumo-valores";
 import { EsqueletoDetalheOrcamento } from "@/components/painel/esqueletos";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +22,7 @@ import { nomeDeExibicao } from "@/lib/prestador";
 import { formatarData, hojeISO } from "@/lib/datas";
 import { formatarTelefone } from "@/lib/formatacao";
 import { montarEnvio } from "@/lib/envio-orcamento";
+import { pixDoOrcamento, referenciaDoId } from "@/lib/pix/orcamento";
 import { calcularResumo } from "@/lib/orcamento/calculos";
 import {
   formatarNumeroOrcamento,
@@ -87,6 +89,18 @@ async function DetalheOrcamento({ params }: { params: Params }) {
           />
         </CardContent>
       </Card>
+
+      {orcamento.status === "aprovado" && (
+        <PagamentoSinal
+          orcamentoId={orcamento.id}
+          pix={pixDoOrcamento({
+            prestador,
+            orcamento,
+            referencia: referenciaDoId(orcamento.id),
+          })}
+          sinalRecebidoEm={orcamento.sinal_recebido_em}
+        />
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
         <div className="grid min-w-0 gap-6">

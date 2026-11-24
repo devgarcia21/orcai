@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { somenteDigitos } from "@/lib/formatacao";
-import { telefoneValido } from "@/lib/pix";
+import { telefoneValido } from "@/lib/pix/chave";
 
 /** Texto opcional: espaços são removidos e vazio vira null. */
 export const textoOpcional = (max: number, rotulo: string) =>

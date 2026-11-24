@@ -152,12 +152,32 @@ describe("gerarPdfOrcamento", () => {
     if (process.env.PDF_AMOSTRA) writeFileSync(process.env.PDF_AMOSTRA, pdf);
   });
 
+  it("inclui o QR Code PIX do sinal com o valor e a instrução", async () => {
+    // 3 itens de 2,5 × R$ 19,99 = R$ 149,94; − R$ 10,00 = R$ 139,94; sinal 30% = R$ 41,98
+    const pdf = await gerarPdfOrcamento({ ...exemplo(3), referenciaPix: "0a1b2c3d" });
+    const [pagina] = await textosPorPagina(pdf);
+    expect(pagina).toContain("Leia o QR Code no app do seu banco");
+    // O extrator de texto separa os pedaços com espaços; comparamos sem eles.
+    expect(pagina.replace(/\s+/g, "")).toContain("Sinal(30%):R$41,98");
+  });
+
+  it("sem cidade (obrigatória no BR Code), mostra só a chave, sem QR Code", async () => {
+    const dados = exemplo(3);
+    dados.prestador = { ...dados.prestador, cidade: null };
+    const [pagina] = await textosPorPagina(
+      await gerarPdfOrcamento({ ...dados, referenciaPix: "0a1b2c3d" }),
+    );
+    expect(pagina).toContain("Pagamento via PIX");
+    expect(pagina).not.toContain("Leia o QR Code");
+  });
+
   it("embute a logo do prestador", async () => {
     const dados = exemplo(2);
     const semLogo = await gerarPdfOrcamento(dados);
     const comLogo = await gerarPdfOrcamento({
       ...dados,
       logo: { data: pngSolido(120, 60, [10, 92, 214]), format: "png" },
+      referenciaPix: "0a1b2c3d", // amostra completa: logo + QR Code PIX
     });
     expect(comLogo.toString("latin1")).toContain("/Subtype /Image");
     expect(semLogo.toString("latin1")).not.toContain("/Subtype /Image");

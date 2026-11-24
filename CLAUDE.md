@@ -58,6 +58,7 @@ src/
                             # InputMoeda, SelectNativo, Secao
     painel/esqueletos.tsx   # esqueletos de carregamento, no formato de cada conteúdo
     clientes/ orcamentos/ painel/ perfil/ auth/   # componentes por domínio
+    pix/                    # QrCode (SVG) e BlocoPagamentoPix (cliente e painel)
     publico/                # página do cliente: resposta, visualização, PIX, status
     orcamentos/conteudo-orcamento.tsx  # itens e condições (painel E página pública)
   hooks/use-acao-formulario.ts  # liga <form> a uma Server Action
@@ -68,6 +69,10 @@ src/
     busca.ts                # busca sem acento
     pdf/                    # documento react-pdf, geração, nome do arquivo, fontes Inter (+ testes)
     prestador.ts            # nomeDeExibicao, perfilCompleto (puros: usados no app e no PDF)
+    pix/chave.ts            # ⭐ regra ÚNICA de chave PIX (normaliza + valida), Perfil e QR
+    pix/brcode.ts           # gerador do PIX Copia e Cola (EMV/TLV + CRC16) (+ testes)
+    pix/orcamento.ts        # qual PIX gerar p/ o orçamento (sinal ou total) (+ testes)
+    pix/qrcode.ts           # QR Code como caminho SVG (página e PDF)
     whatsapp.ts             # telefone → wa.me, link com mensagem, textos padrão (+ testes)
     envio-orcamento.ts      # monta link público + link do WhatsApp (servidor)
     url-app.ts              # base dos links (NEXT_PUBLIC_APP_URL) · copiar.ts (clipboard)
@@ -76,7 +81,7 @@ src/
     validacoes/             # schemas zod (comum, auth, perfil, cliente, orcamento)
     types/database.ts       # TODOS os tipos do banco (manuais por enquanto)
     acoes.ts                # EstadoAcao<T>, erro(), sucesso(), errosPorCaminho()
-    formatacao.ts pix.ts rotas.ts
+    formatacao.ts rotas.ts
 supabase/migrations/        # SQL colado manualmente no SQL Editor do Supabase
 ```
 
@@ -248,6 +253,40 @@ fallback={<Esqueleto/>}><Dados params={params}/></Suspense></> }`. Nunca faça `
   link, WhatsApp, prévia do robô, aprovar, recusar com motivo, vencido, 404, PDF e linha
   do tempo) e as funções SQL no PGlite (53 casos, incluindo isolamento entre prestadores).
 
+### PIX do sinal (Etapa 5)
+
+- **QR Code estático, sem gateway**: o BR Code é gerado no servidor a partir da chave do
+  prestador; a confirmação do pagamento é **manual** (o prestador confere o extrato e marca
+  "Sinal recebido"). Evolução futura: gateway (Mercado Pago, Efí) com PIX dinâmico e webhook.
+- **Gerador próprio** (`lib/pix/brcode.ts`, puro): EMV/TLV do Manual de Padrões para
+  Iniciação do Pix — 00, 26 (GUI br.gov.bcb.pix + chave), 52=0000, 53=986, 54 (valor com
+  ponto, omitido se 0), 58=BR, 59 nome (≤25), 60 cidade (≤15), 62/05 txid (≤25) e 63 CRC16
+  CCITT-FALSE (0x1021, inicial 0xFFFF). Nome/cidade sem acentos e só letras/números/espaço.
+- **Testado contra o exemplo oficial do BCB** (reproduzido byte a byte, CRC 1D3D) e o vetor
+  padrão do CRC ("123456789" → 29B1). Um teste pinta o QR desenhado numa imagem e o
+  decodifica com **jsQR** (leitor independente): prova que o DESENHO é legível.
+- **Chave**: `normalizarChavePix` é a regra única — o Perfil valida com ela ao salvar e o
+  gerador normaliza com ela (CPF/CNPJ com dígitos verificadores; telefone +55; e-mail
+  minúsculo ≤77; EVP no formato UUID, como está).
+- **Valor**: sinal (`calcularResumo`); com sinal 0%, o valor total (`pixDoOrcamento`).
+- **txid estável**: `ORC` + número (4 dígitos) + 8 caracteres hex do id do orçamento
+  (aleatórios do UUID v4). O mesmo orçamento gera sempre o mesmo QR. A página pública recebe
+  só esse trecho (`referencia_pix`), nunca o id.
+- **Cidade é obrigatória** no BR Code: sem ela (ou sem chave válida) não há QR — o cliente vê
+  só a chave em texto e o painel explica o motivo com link para o Perfil, que avisa quando
+  a cidade está vazia. `perfilCompleto` passou a exigir cidade.
+- **QR como SVG desenhado por nós** (`desenharQrCode` → um único `<path>`, correção M,
+  margem de 4 módulos): o mesmo traço vira `<svg>` na página e `<Svg>` no PDF.
+- **Banco (004)**: `sinal_recebido_em` com constraint `orcamentos_sinal_so_aprovado`;
+  `proteger_orcamento` aceita alterar só `visualizado_em` e `sinal_recebido_em` em
+  finalizados; `obter_orcamento_publico` devolve `sinal_recebido` (booleano) e
+  `referencia_pix`. Testado no PGlite (20 casos novos + os 53 da 003).
+- **Página do cliente**: antes de aprovar, só a chave em texto; aprovado → bloco "Pague o
+  sinal via PIX" no topo (QR + Copia e Cola); sinal recebido → "Sinal recebido. Obrigado!".
+- **PDF**: o documento calcula o PIX pela mesma regra (recebe só `referenciaPix`).
+- Verificado no navegador: QR da tela escaneado com jsQR = Copia e Cola; marcar/desfazer o
+  sinal refletem na página do cliente; sinal 0% cobra o total; sem cidade não há QR.
+
 ## Convenções
 
 - Mensagens de erro em português, claras e acionáveis ("Digite um telefone válido com DDD").
@@ -255,7 +294,7 @@ fallback={<Esqueleto/>}><Dados params={params}/></Suspense></> }`. Nunca faça `
   `useAcaoFormulario`. Nada de lógica de validação duplicada.
 - Confirmações destrutivas: `ConfirmarAcao` (com `bloqueio` quando a ação não é permitida).
 - Listas vazias: `EstadoVazio` com uma ação clara.
-- Novas tabelas: sempre em nova migration numerada (`004_...sql`), idempotente, com RLS.
+- Novas tabelas: sempre em nova migration numerada (`005_...sql`), idempotente, com RLS.
 - Acesso público a dados: nunca abrir tabelas para anon; usar função SECURITY DEFINER
   com search_path fixo que devolve só o necessário (e testar no PGlite).
 - Tipos do banco só em `lib/types/database.ts`. Rotas só via `lib/rotas.ts`.
@@ -268,7 +307,7 @@ fallback={<Esqueleto/>}><Dados params={params}/></Suspense></> }`. Nunca faça `
 - [x] **Etapa 2** — Clientes e orçamentos com itens
 - [x] **Etapa 3** — PDF profissional do orçamento (+ navegação instantânea no painel)
 - [x] **Etapa 4** — Link público com aprovar/recusar e envio por WhatsApp
-- [ ] **Etapa 5** — QR Code PIX estático do sinal
+- [x] **Etapa 5** — QR Code PIX estático do sinal
 - [ ] **Etapa 6** — IA que transforma texto ou áudio em itens de orçamento
 - [ ] **Etapa 7** — Painel com métricas
 - [ ] **Etapa 8** — README final, testes e deploy

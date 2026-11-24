@@ -1,11 +1,23 @@
-import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import {
+  Document,
+  Image,
+  Page,
+  Path,
+  Rect,
+  StyleSheet,
+  Svg,
+  Text,
+  View,
+} from "@react-pdf/renderer";
 
 import { formatarData } from "@/lib/datas";
 import { formatarChavePix, formatarTelefone } from "@/lib/formatacao";
 import { formatarMoeda, formatarQuantidade } from "@/lib/moeda";
 import { calcularResumo, totalItem } from "@/lib/orcamento/calculos";
 import { numeroComZeros, ROTULOS_UNIDADE } from "@/lib/orcamento/regras";
-import { OPCOES_CHAVE_PIX } from "@/lib/pix";
+import { OPCOES_CHAVE_PIX } from "@/lib/pix/chave";
+import { pixDoOrcamento } from "@/lib/pix/orcamento";
+import { desenharQrCode } from "@/lib/pix/qrcode";
 import { nomeDeExibicao } from "@/lib/prestador";
 import type { OrcamentoDocumento, Prestador } from "@/lib/types/database";
 
@@ -27,6 +39,11 @@ export type DadosPdfOrcamento = {
   /** Serve tanto para o painel (OrcamentoCompleto) quanto para o link público. */
   orcamento: OrcamentoDocumento;
   logo: LogoPdf | null;
+  /**
+   * Referência estável do orçamento para o txid do PIX (8 caracteres do id).
+   * Com ela e uma chave PIX válida, o bloco PIX ganha o QR Code do sinal.
+   */
+  referenciaPix?: string;
 };
 
 // Identidade visual do app (cores convertidas de globals.css).
@@ -152,6 +169,9 @@ const estilos = StyleSheet.create({
     padding: 10,
   },
   tituloPix: { fontSize: 10, fontWeight: 700, color: COR.primaria, marginBottom: 4 },
+  linhaPix: { flexDirection: "row", alignItems: "center", gap: 16 },
+  qrPix: { width: 96, height: 96 },
+  valorPix: { fontSize: 12, fontWeight: 700, color: COR.texto, marginTop: 6 },
 
   // Rodapé
   rodape: {
@@ -307,19 +327,44 @@ function BlocoTexto({ titulo, texto }: { titulo: string; texto: string | null })
   );
 }
 
-function Pix({ prestador }: Pick<DadosPdfOrcamento, "prestador">) {
+function Pix({ prestador, orcamento, referenciaPix }: DadosPdfOrcamento) {
   if (!prestador.tipo_chave_pix || !prestador.chave_pix) return null;
+
+  // QR Code do sinal (ou do total, com sinal 0%) — mesma regra da página do cliente.
+  const pix = referenciaPix
+    ? pixDoOrcamento({ prestador, orcamento, referencia: referenciaPix })
+    : null;
+  const qr = pix?.disponivel ? desenharQrCode(pix.payload) : null;
+
   return (
     <View style={estilos.caixaPix} wrap={false}>
-      <Text style={estilos.tituloPix}>Pagamento via PIX</Text>
-      <Text>
-        <Text style={estilos.textoSuave}>
-          Chave ({OPCOES_CHAVE_PIX[prestador.tipo_chave_pix].rotulo}):{" "}
-        </Text>
-        <Text style={{ fontWeight: 600 }}>
-          {formatarChavePix(prestador.tipo_chave_pix, prestador.chave_pix)}
-        </Text>
-      </Text>
+      <View style={estilos.linhaPix}>
+        <View style={{ flex: 1 }}>
+          <Text style={estilos.tituloPix}>Pagamento via PIX</Text>
+          <Text>
+            <Text style={estilos.textoSuave}>
+              Chave ({OPCOES_CHAVE_PIX[prestador.tipo_chave_pix].rotulo}):{" "}
+            </Text>
+            <Text style={{ fontWeight: 600 }}>
+              {formatarChavePix(prestador.tipo_chave_pix, prestador.chave_pix)}
+            </Text>
+          </Text>
+          {pix?.disponivel && (
+            <>
+              <Text style={estilos.valorPix}>
+                {pix.rotulo}: {formatarMoeda(pix.valorCentavos)}
+              </Text>
+              <Text style={estilos.textoSuave}>Leia o QR Code no app do seu banco</Text>
+            </>
+          )}
+        </View>
+        {qr && (
+          <Svg viewBox={`0 0 ${qr.lado} ${qr.lado}`} style={estilos.qrPix}>
+            <Rect x={0} y={0} width={qr.lado} height={qr.lado} fill="#ffffff" />
+            <Path d={qr.caminho} fill="#000000" />
+          </Svg>
+        )}
+      </View>
     </View>
   );
 }
@@ -360,7 +405,7 @@ export function DocumentoOrcamento(dados: DadosPdfOrcamento) {
           texto={orcamento.condicoes_pagamento}
         />
         <BlocoTexto titulo="Observações" texto={orcamento.observacoes} />
-        <Pix prestador={prestador} />
+        <Pix {...dados} />
       </Page>
     </Document>
   );

@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { obterOrcamento } from "@/lib/dados/orcamentos";
 import { obterPrestadorAtual } from "@/lib/dados/prestador";
 import { nomeArquivoPdf } from "@/lib/pdf/nome-arquivo";
+import { referenciaDoId } from "@/lib/pix/orcamento";
 import { baixarLogo, gerarPdfOrcamento } from "@/lib/pdf/gerar-pdf";
 import { createClient } from "@/lib/supabase/server";
 
@@ -32,7 +33,12 @@ export async function GET(
   }
 
   const logo = await baixarLogo(prestador.logo_url);
-  const pdf = await gerarPdfOrcamento({ prestador, orcamento, logo });
+  const pdf = await gerarPdfOrcamento({
+    prestador,
+    orcamento,
+    logo,
+    referenciaPix: referenciaDoId(orcamento.id),
+  });
 
   const nome = nomeArquivoPdf(orcamento.numero, orcamento.cliente.nome);
   const disposicao = request.nextUrl.searchParams.get("download")

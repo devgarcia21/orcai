@@ -10,10 +10,12 @@ import {
 import { ResumoValores } from "@/components/orcamentos/resumo-valores";
 import {
   BlocoPix,
+  SinalRecebido,
   CabecalhoPrestador,
   EsqueletoPublico,
   StatusPublico,
 } from "@/components/publico/blocos-publicos";
+import { BlocoPagamentoPix } from "@/components/pix/bloco-pagamento-pix";
 import { RegistrarVisualizacao } from "@/components/publico/registrar-visualizacao";
 import { RespostaCliente } from "@/components/publico/resposta-cliente";
 import { buttonVariants } from "@/components/ui/button";
@@ -23,6 +25,7 @@ import { formatarData, hojeISO } from "@/lib/datas";
 import { formatarMoeda } from "@/lib/moeda";
 import { calcularResumo } from "@/lib/orcamento/calculos";
 import { clientePodeResponder, numeroComZeros } from "@/lib/orcamento/regras";
+import { pixDoOrcamento } from "@/lib/pix/orcamento";
 import { nomeDeExibicao } from "@/lib/prestador";
 import { rotaPdfPublico } from "@/lib/rotas";
 import { cn } from "@/lib/utils";
@@ -80,6 +83,16 @@ async function OrcamentoDoCliente({ params }: { params: Params }) {
   );
   const numero = numeroComZeros(orcamento.numero);
   const podeResponder = clientePodeResponder(orcamento, hojeISO());
+
+  // Pagamento do sinal: QR Code só depois da aprovação (antes, só a chave em texto).
+  const aprovado = orcamento.status === "aprovado";
+  const pix = aprovado
+    ? pixDoOrcamento({ prestador, orcamento, referencia: orcamento.referencia_pix })
+    : null;
+  const mostrarQr = aprovado && !orcamento.sinal_recebido && pix?.disponivel === true;
+  const mostrarChaveTexto =
+    orcamento.status === "enviado" ||
+    (aprovado && !orcamento.sinal_recebido && !mostrarQr);
   const whatsappPrestador = normalizarTelefoneWhatsApp(prestador.telefone)
     ? montarLinkWhatsApp(
         prestador.telefone,
@@ -108,6 +121,9 @@ async function OrcamentoDoCliente({ params }: { params: Params }) {
 
       <StatusPublico orcamento={orcamento} />
 
+      {aprovado && orcamento.sinal_recebido && <SinalRecebido />}
+      {mostrarQr && pix?.disponivel && <BlocoPagamentoPix pix={pix} />}
+
       <ItensOrcamento itens={orcamento.itens} />
 
       <Card>
@@ -121,11 +137,13 @@ async function OrcamentoDoCliente({ params }: { params: Params }) {
 
       <CondicoesObservacoes {...orcamento} />
 
-      <BlocoPix
-        prestador={prestador}
-        valorSinal={resumo.sinal}
-        percentualSinal={resumo.percentualSinal}
-      />
+      {mostrarChaveTexto && (
+        <BlocoPix
+          prestador={prestador}
+          valorSinal={resumo.sinal}
+          percentualSinal={resumo.percentualSinal}
+        />
+      )}
 
       <div className="grid gap-2 sm:grid-cols-2">
         <a

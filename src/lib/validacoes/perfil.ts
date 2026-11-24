@@ -1,15 +1,12 @@
 import { z } from "zod";
 
-import { somenteDigitos } from "@/lib/formatacao";
-import { cnpjValido, cpfValido, telefoneValido } from "@/lib/pix";
+import { normalizarChavePix } from "@/lib/pix/chave";
 import { TIPOS_CHAVE_PIX } from "@/lib/types/database";
 
 import { telefoneOpcional, textoOpcional } from "./comum";
 
 export const LOGO_TAMANHO_MAXIMO = 2 * 1024 * 1024; // 2 MB
 export const LOGO_TIPOS_ACEITOS = ["image/png", "image/jpeg"] as const;
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Valida a logo enviada (regra compartilhada entre navegador e servidor). */
 export function validarLogo(arquivo: File): string | null {
@@ -57,37 +54,10 @@ export const perfilSchema = z
     }
     if (!chaveBruta) return falhar("Informe a chave PIX.");
 
-    // Normaliza a chave no formato aceito pelo PIX.
-    let chave: string;
-    switch (tipo) {
-      case "cpf":
-        chave = somenteDigitos(chaveBruta);
-        if (!cpfValido(chave)) return falhar("CPF inválido. Confira os números.");
-        break;
-      case "cnpj":
-        chave = somenteDigitos(chaveBruta);
-        if (!cnpjValido(chave)) return falhar("CNPJ inválido. Confira os números.");
-        break;
-      case "email":
-        chave = chaveBruta.toLowerCase();
-        if (!z.email().safeParse(chave).success)
-          return falhar("Digite um e-mail válido.");
-        break;
-      case "telefone": {
-        const digitos = somenteDigitos(chaveBruta.replace(/^\+55/, ""));
-        if (!telefoneValido(digitos)) return falhar("Digite um telefone válido com DDD.");
-        chave = `+55${digitos}`;
-        break;
-      }
-      case "aleatoria":
-        chave = chaveBruta.toLowerCase();
-        if (!UUID.test(chave)) {
-          return falhar(
-            "A chave aleatória tem 32 letras e números separados por hífens.",
-          );
-        }
-        break;
-    }
+    // Mesma regra do gerador do QR Code PIX (lib/pix/chave.ts).
+    const resultado = normalizarChavePix(tipo, chaveBruta);
+    if (!resultado.ok) return falhar(resultado.erro);
+    const chave = resultado.chave;
 
     return { ...dados, tipo_chave_pix: tipo, chave_pix: chave };
   });

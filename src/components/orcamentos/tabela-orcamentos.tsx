@@ -1,4 +1,4 @@
-import { ChevronRight, Eye } from "lucide-react";
+import { Banknote, ChevronRight, Eye } from "lucide-react";
 import Link from "next/link";
 
 import { formatarData } from "@/lib/datas";
@@ -9,12 +9,24 @@ import type { OrcamentoResumo } from "@/lib/types/database";
 
 import { BadgeStatus } from "./badge-status";
 
-/** "Visualizado": enviado e o cliente já abriu o link (ainda sem resposta). */
-function IndicadorVisualizado({
+/**
+ * Indicadores discretos ao lado do status:
+ * - "Visualizado": enviado e o cliente já abriu o link (ainda sem resposta);
+ * - "Sinal recebido": aprovado e o prestador confirmou o pagamento do sinal.
+ */
+function IndicadorAndamento({
   orcamento,
 }: {
-  orcamento: Pick<OrcamentoResumo, "status" | "visualizado_em">;
+  orcamento: Pick<OrcamentoResumo, "status" | "visualizado_em" | "sinal_recebido_em">;
 }) {
+  if (orcamento.status === "aprovado" && orcamento.sinal_recebido_em) {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
+        <Banknote className="size-3.5" aria-hidden />
+        Sinal recebido
+      </span>
+    );
+  }
   if (orcamento.status !== "enviado" || !orcamento.visualizado_em) return null;
   return (
     <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-700">
@@ -59,7 +71,7 @@ export function TabelaOrcamentos({ orcamentos, ocultarCliente }: Props) {
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <BadgeStatus status={o.status} />
-                  <IndicadorVisualizado orcamento={o} />
+                  <IndicadorAndamento orcamento={o} />
                 </div>
               </div>
               <p className="mt-3 text-lg font-semibold tabular-nums">
@@ -110,7 +122,7 @@ export function TabelaOrcamentos({ orcamentos, ocultarCliente }: Props) {
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <BadgeStatus status={o.status} />
-                    <IndicadorVisualizado orcamento={o} />
+                    <IndicadorAndamento orcamento={o} />
                   </div>
                 </td>
                 <td className="px-4 py-3 text-right font-medium tabular-nums">

@@ -177,3 +177,33 @@ export async function alterarStatusOrcamento(
   revalidatePath(ROTAS.painel, "layout");
   return sucesso(`Orçamento marcado como ${ROTULOS_STATUS[status.data].toLowerCase()}.`);
 }
+
+/**
+ * Marca (recebido = true) ou desfaz (false) o recebimento do sinal.
+ * O QR Code é estático: o prestador confere no extrato e confirma à mão.
+ * O banco só aceita sinal em orçamentos aprovados (constraint da migration 004).
+ */
+export async function definirSinalRecebido(
+  id: string,
+  recebido: boolean,
+): Promise<EstadoAcao> {
+  const atual = await obterOrcamento(id);
+  if (!atual) return erro("Orçamento não encontrado.");
+  if (atual.status !== "aprovado") {
+    return erro("O sinal só pode ser marcado em orçamentos aprovados.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("orcamentos")
+    .update({ sinal_recebido_em: recebido ? new Date().toISOString() : null })
+    .eq("id", id)
+    .eq("prestador_id", atual.prestador_id);
+
+  if (error) return erro(traduzirErroBanco(error, "Não foi possível atualizar o sinal."));
+
+  revalidatePath(ROTAS.painel, "layout");
+  return sucesso(
+    recebido ? "Sinal marcado como recebido." : "Marcação do sinal desfeita.",
+  );
+}

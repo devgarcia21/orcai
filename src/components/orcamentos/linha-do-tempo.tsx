@@ -1,4 +1,4 @@
-import { Check, Eye, FilePlus2, Send, X, type LucideIcon } from "lucide-react";
+import { Banknote, Check, Eye, FilePlus2, Send, X, type LucideIcon } from "lucide-react";
 
 import { formatarDataHora } from "@/lib/datas";
 import type { Orcamento } from "@/lib/types/database";
@@ -22,6 +22,7 @@ type Props = Pick<
   | "visualizado_em"
   | "respondido_em"
   | "motivo_recusa"
+  | "sinal_recebido_em"
 >;
 
 /** Criado → Enviado → Visualizado pelo cliente → Aprovado/Recusado, com data e hora. */
@@ -50,6 +51,17 @@ export function LinhaDoTempo(o: Props) {
       tom: recusado ? "perigo" : "sucesso",
     },
   ];
+
+  // Depois da aprovação, o próximo passo é o pagamento do sinal.
+  if (o.status === "aprovado") {
+    etapas.push({
+      titulo: "Sinal recebido",
+      quando: o.sinal_recebido_em,
+      icone: Banknote,
+      pendente: "Aguardando pagamento do sinal",
+      tom: "sucesso",
+    });
+  }
 
   return (
     <ol className="grid gap-0">

@@ -23,6 +23,7 @@ export async function GET(request: NextRequest, ctx: RouteContext<"/o/[token]/pd
     prestador: orcamento.prestador,
     orcamento,
     logo,
+    referenciaPix: orcamento.referencia_pix,
   });
 
   const nome = nomeArquivoPdf(orcamento.numero, orcamento.cliente.nome);

@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatarData, formatarDataHora } from "@/lib/datas";
 import { formatarChavePix } from "@/lib/formatacao";
 import { formatarMoeda } from "@/lib/moeda";
-import { OPCOES_CHAVE_PIX } from "@/lib/pix";
+import { OPCOES_CHAVE_PIX } from "@/lib/pix/chave";
 import { nomeDeExibicao } from "@/lib/prestador";
 import type { OrcamentoPublico, PrestadorPublico } from "@/lib/types/database";
 
@@ -154,5 +154,16 @@ export function EsqueletoPublico() {
       <Skeleton className="h-36 w-full rounded-xl" />
       <span className="sr-only">Carregando...</span>
     </div>
+  );
+}
+
+/** Substitui o bloco de pagamento quando o prestador confirma o sinal. */
+export function SinalRecebido() {
+  return (
+    <Alert className="border-emerald-200 bg-emerald-50 py-4 text-emerald-900 *:data-[slot=alert-description]:text-emerald-900">
+      <CircleCheck />
+      <AlertTitle className="text-base">Sinal recebido. Obrigado!</AlertTitle>
+      <AlertDescription>O prestador confirmou o pagamento do sinal.</AlertDescription>
+    </Alert>
   );
 }

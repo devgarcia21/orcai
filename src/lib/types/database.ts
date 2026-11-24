@@ -74,6 +74,8 @@ export type Orcamento = {
   visualizado_em: string | null;
   respondido_em: string | null;
   motivo_recusa: string | null;
+  /** Marcado à mão pelo prestador (QR Code estático, sem gateway). Só em aprovados. */
+  sinal_recebido_em: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -99,7 +101,14 @@ export type OrcamentoCompleto = Orcamento & {
 /** Linha das listagens: orçamento + nome do cliente + total já calculado. */
 export type OrcamentoResumo = Pick<
   Orcamento,
-  "id" | "numero" | "titulo" | "status" | "created_at" | "cliente_id" | "visualizado_em"
+  | "id"
+  | "numero"
+  | "titulo"
+  | "status"
+  | "created_at"
+  | "cliente_id"
+  | "visualizado_em"
+  | "sinal_recebido_em"
 > & {
   cliente_nome: string;
   total_centavos: number;
@@ -151,6 +160,10 @@ export type OrcamentoPublico = OrcamentoDocumento &
   Pick<Orcamento, "status" | "enviado_em" | "respondido_em"> & {
     /** Calculado no banco com a data de hoje no Brasil. */
     vencido: boolean;
+    /** O prestador já marcou o sinal como recebido (migration 004). */
+    sinal_recebido: boolean;
+    /** 8 caracteres aleatórios e estáveis do orçamento, para o txid do PIX. */
+    referencia_pix: string;
     prestador: PrestadorPublico;
   };
 

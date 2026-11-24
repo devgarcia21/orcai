@@ -10,7 +10,7 @@ import { Secao } from "@/components/formulario/secao";
 import { SelectNativo } from "@/components/formulario/select-nativo";
 import { useAcaoFormulario } from "@/hooks/use-acao-formulario";
 import { formatarChavePix, formatarTelefone } from "@/lib/formatacao";
-import { OPCOES_CHAVE_PIX } from "@/lib/pix";
+import { OPCOES_CHAVE_PIX } from "@/lib/pix/chave";
 import { TIPOS_CHAVE_PIX, type Prestador, type TipoChavePix } from "@/lib/types/database";
 
 import { CampoLogo } from "./campo-logo";
@@ -65,6 +65,15 @@ export function FormularioPerfil({ prestador }: { prestador: Prestador }) {
           placeholder="Ex.: Campinas - SP"
           defaultValue={prestador.cidade ?? ""}
           erros={erros.cidade}
+          dica={
+            prestador.cidade ? (
+              "Aparece no QR Code PIX dos seus orçamentos."
+            ) : (
+              <span className="font-medium text-amber-700">
+                Preencha a cidade: ela é obrigatória para gerar o QR Code PIX.
+              </span>
+            )
+          }
         />
       </Secao>
 

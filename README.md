@@ -6,7 +6,7 @@ O Orçaí é um SaaS para prestadores de serviço brasileiros (eletricistas, enc
 pedreiros, oficinas) criarem orçamentos bonitos e claros direto do celular, enviarem ao
 cliente pelo WhatsApp e receberem o sinal por PIX.
 
-> 🚧 Em construção. Etapa atual: **4 — link público, aprovação pelo cliente e envio pelo WhatsApp**.
+> 🚧 Em construção. Etapa atual: **5 — pagamento do sinal por PIX (QR Code estático)**.
 
 ## O que já funciona
 
@@ -19,7 +19,19 @@ cliente pelo WhatsApp e receberem o sinal por PIX.
 - Navegação instantânea no painel: a tela aparece na hora e os dados chegam em seguida
 - Envio pelo WhatsApp com mensagem pronta e link público do orçamento
 - Página do cliente (sem login): ver itens e totais, copiar a chave PIX, baixar o PDF e aprovar ou recusar
-- Linha do tempo no painel: criado, enviado, visualizado pelo cliente e resposta
+- Linha do tempo no painel: criado, enviado, visualizado pelo cliente, resposta e sinal recebido
+- Pagamento do sinal por PIX: depois de aprovar, o cliente vê o QR Code e o "Pix Copia e Cola"
+  com o valor do sinal (ou do total, se o sinal for 0%); o QR também sai no PDF
+
+## Sobre o pagamento por PIX
+
+O QR Code é **estático**: ele é gerado a partir da chave PIX do prestador, segundo o
+Manual de Padrões para Iniciação do Pix do Banco Central, sem intermediários e sem taxas.
+Por isso, **a confirmação do pagamento é manual** — o prestador confere o extrato do banco
+e clica em "Marcar sinal como recebido" (dá para desfazer se marcar por engano).
+
+**Evolução futura:** integrar um gateway de pagamento (ex.: Mercado Pago ou Efí) para gerar
+cobranças PIX dinâmicas e confirmar o pagamento automaticamente via webhook.
 
 ## Tecnologias
 
@@ -47,6 +59,7 @@ Postgres, Storage) · zod · Server Actions · React PDF · Vitest
    1. `001_inicial.sql`
    2. `002_clientes_orcamentos.sql`
    3. `003_link_publico.sql`
+   4. `004_pix_sinal.sql`
 
    (Os scripts podem ser executados mais de uma vez sem erro.)
 
@@ -84,6 +97,9 @@ Postgres, Storage) · zod · Server Actions · React PDF · Vitest
   rodapé e que nenhuma linha foi cortada.
 - **Navegação instantânea** com Cache Components: cada página tem uma casca estática e
   os dados do usuário chegam em streaming, com esqueletos no lugar exato do conteúdo.
+- **Gerador de PIX próprio e testado**: o "Pix Copia e Cola" (formato EMV + CRC16) reproduz
+  byte a byte o exemplo oficial do Banco Central, e um teste decodifica o QR Code desenhado
+  com um leitor independente (jsQR) para garantir que ele é legível.
 - **Link público seguro**: o cliente acessa por um token aleatório de 192 bits, sem login,
   e as tabelas continuam fechadas — a leitura e a resposta passam por funções do banco que
   devolvem só o necessário (testadas com Postgres real no PGlite).
@@ -94,7 +110,7 @@ Postgres, Storage) · zod · Server Actions · React PDF · Vitest
 2. ✅ Clientes e orçamentos com itens
 3. ✅ PDF profissional
 4. ✅ Link público com aprovar/recusar e envio por WhatsApp
-5. QR Code PIX estático do sinal
+5. ✅ QR Code PIX estático do sinal
 6. IA que transforma texto ou áudio em itens de orçamento
 7. Painel com métricas
 8. Testes e deploy

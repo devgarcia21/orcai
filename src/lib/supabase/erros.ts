@@ -29,6 +29,9 @@ export function violouChaveEstrangeira(error: PostgrestError): boolean {
 
 export function traduzirErroBanco(error: PostgrestError, padrao: string): string {
   if (MENSAGENS_BANCO[error.message]) return MENSAGENS_BANCO[error.message];
+  if (error.message?.includes("orcamentos_sinal_so_aprovado")) {
+    return "O sinal só pode ser marcado em orçamentos aprovados.";
+  }
   if (violouChaveEstrangeira(error)) {
     return "Este registro está sendo usado em outro lugar e não pode ser alterado ou excluído.";
   }
