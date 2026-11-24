@@ -21,6 +21,8 @@ export type ItemEditavel = {
   quantidade: string;
   unidade: UnidadeItem;
   valor_unitario_centavos: number;
+  /** Veio da IA sem valor (sem correspondência no histórico): destaca "Defina o valor". */
+  valorPendente?: boolean;
 };
 
 let contadorChaves = 0;
@@ -44,6 +46,16 @@ export const paraCalculo = (item: ItemEditavel) => ({
   quantidade: lerQuantidade(item.quantidade) ?? 0,
   valor_unitario_centavos: item.valor_unitario_centavos,
 });
+
+/** Destaque do campo de valor que a IA deixou vazio (o prestador define). */
+export const CLASSE_VALOR_PENDENTE =
+  "border-amber-500 bg-amber-50 ring-2 ring-amber-200 dark:bg-amber-950/30 dark:ring-amber-900";
+
+export function AvisoDefinaValor() {
+  return (
+    <span className="font-medium text-amber-700 dark:text-amber-400">Defina o valor</span>
+  );
+}
 
 type Props = {
   itens: ItemEditavel[];
@@ -71,6 +83,7 @@ export function EditorItens({ itens, aoMudar, erros }: Props) {
         {itens.map((item, i) => {
           const erro = (campo: string) => erros[`itens.${i}.${campo}`];
           const totalLinha = totalItem(paraCalculo(item));
+          const pendente = item.valorPendente && item.valor_unitario_centavos === 0;
 
           return (
             <li key={item.chave} className="rounded-xl border bg-background p-3 sm:p-4">
@@ -181,14 +194,22 @@ export function EditorItens({ itens, aoMudar, erros }: Props) {
                     rotulo="Valor unitário"
                     erros={erro("valor_unitario_centavos")}
                     className="col-span-2 sm:col-span-1"
+                    dica={pendente ? <AvisoDefinaValor /> : undefined}
                   >
                     {(aria) => (
                       <InputMoeda
                         centavos={item.valor_unitario_centavos}
                         aoMudar={(centavos) =>
-                          atualizar(i, { valor_unitario_centavos: centavos })
+                          atualizar(i, {
+                            valor_unitario_centavos: centavos,
+                            valorPendente: false,
+                          })
                         }
-                        className={cn(CLASSE_CONTROLE, "tabular-nums")}
+                        className={cn(
+                          CLASSE_CONTROLE,
+                          "tabular-nums",
+                          pendente && CLASSE_VALOR_PENDENTE,
+                        )}
                         {...aria}
                       />
                     )}

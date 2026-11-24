@@ -6,6 +6,7 @@ import { FormularioOrcamento } from "@/components/orcamentos/formulario-orcament
 import { EsqueletoFormularioOrcamento } from "@/components/painel/esqueletos";
 import { listarClientes } from "@/lib/dados/clientes";
 import { adicionarDias, hojeISO } from "@/lib/datas";
+import { iaConfigurada } from "@/lib/ia/configuracao";
 import { VALIDADE_PADRAO_DIAS } from "@/lib/orcamento/regras";
 import { ROTAS } from "@/lib/rotas";
 
@@ -25,6 +26,7 @@ async function NovoOrcamento({ searchParams }: { searchParams: SearchParams }) {
       clientes={clientes}
       clienteInicialId={clienteInicial}
       validadePadrao={adicionarDias(hojeISO(), VALIDADE_PADRAO_DIAS)}
+      iaDisponivel={iaConfigurada()}
     />
   );
 }

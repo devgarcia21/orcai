@@ -20,8 +20,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ESTADO_INICIAL, type EstadoAcao } from "@/lib/acoes";
+import { juntarItens } from "@/lib/ia/aplicar";
 import { formatarMoeda, formatarQuantidade } from "@/lib/moeda";
 import { calcularResumo } from "@/lib/orcamento/calculos";
+import { MAXIMO_ITENS } from "@/lib/orcamento/regras";
 import type { Cliente, OrcamentoCompleto } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +34,7 @@ import {
   paraCalculo,
   type ItemEditavel,
 } from "./editor-itens";
+import { MontarComIA, type ItemParaAdicionar } from "./montar-com-ia";
 import { ResumoValores } from "./resumo-valores";
 import { SeletorCliente } from "./seletor-cliente";
 
@@ -44,6 +47,8 @@ type Props = {
   /** Validade sugerida para orçamentos novos (hoje + 15 dias), calculada no servidor. */
   validadePadrao: string;
   clienteInicialId?: string;
+  /** A IA está configurada no servidor (GEMINI_API_KEY)? */
+  iaDisponivel: boolean;
 };
 
 function itensIniciais(orcamento?: OrcamentoCompleto): ItemEditavel[] {
@@ -62,6 +67,7 @@ export function FormularioOrcamento({
   orcamento,
   validadePadrao,
   clienteInicialId,
+  iaDisponivel,
 }: Props) {
   const [estado, executar, enviando] = useActionState<EstadoAcao, EnvioOrcamento>(
     salvarOrcamento,
@@ -96,6 +102,22 @@ export function FormularioOrcamento({
       mensagemRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [estado]);
+
+  /** Itens aprovados na pré-visualização da IA: entram no fim da lista. */
+  function adicionarDaIA(novos: ItemParaAdicionar[], tituloSugerido: string): number {
+    const convertidos: ItemEditavel[] = novos.map((novo) => ({
+      chave: novaChave(),
+      descricao: novo.descricao,
+      quantidade: novo.quantidade,
+      unidade: novo.unidade,
+      valor_unitario_centavos: novo.valor ?? 0,
+      valorPendente: novo.valor === null,
+    }));
+    const resultado = juntarItens(itens, convertidos, MAXIMO_ITENS);
+    setItens(resultado.itens.length > 0 ? resultado.itens : [itemVazio()]);
+    if (!titulo.trim() && tituloSugerido) setTitulo(tituloSugerido);
+    return resultado.adicionados;
+  }
 
   function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -161,6 +183,8 @@ export function FormularioOrcamento({
             />
           </CardContent>
         </Card>
+
+        <MontarComIA disponivel={iaDisponivel} aoAdicionar={adicionarDaIA} />
 
         <Card className="[--card-spacing:--spacing(4)] sm:[--card-spacing:--spacing(6)]">
           <CardContent>

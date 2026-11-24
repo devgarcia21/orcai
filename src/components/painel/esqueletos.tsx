@@ -169,6 +169,14 @@ export function EsqueletoFormularioOrcamento() {
             <EsqueletoCampo />
           </CardContent>
         </Card>
+        {/* Montar com IA */}
+        <Card>
+          <CardContent className="grid gap-4">
+            <Skeleton className="h-5 w-36" />
+            <Skeleton className="h-24 w-full rounded-lg" />
+            <Skeleton className="h-11 w-full rounded-lg sm:w-36" />
+          </CardContent>
+        </Card>
         <Card>
           <CardContent className="grid gap-4">
             <Skeleton className="h-4 w-16" />

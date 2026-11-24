@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { listarClientes } from "@/lib/dados/clientes";
 import { obterOrcamento } from "@/lib/dados/orcamentos";
 import { adicionarDias, hojeISO } from "@/lib/datas";
+import { iaConfigurada } from "@/lib/ia/configuracao";
 import {
   formatarNumeroOrcamento,
   orcamentoEditavel,
@@ -45,6 +46,7 @@ async function EdicaoOrcamento({ params }: { params: Params }) {
         clientes={clientes}
         orcamento={orcamento}
         validadePadrao={adicionarDias(hojeISO(), VALIDADE_PADRAO_DIAS)}
+        iaDisponivel={iaConfigurada()}
       />
     </>
   );

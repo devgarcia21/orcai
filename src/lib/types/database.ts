@@ -169,3 +169,26 @@ export type OrcamentoPublico = OrcamentoDocumento &
 
 export const ACOES_RESPOSTA = ["aprovar", "recusar"] as const;
 export type AcaoResposta = (typeof ACOES_RESPOSTA)[number];
+
+// --- Uso da IA (migration 005) -----------------------------------------------
+
+/** Uma geração de itens com IA (só leitura para o prestador; escrita por funções). */
+export type UsoIa = {
+  id: string;
+  prestador_id: string;
+  criado_em: string;
+  tokens_entrada: number;
+  tokens_saida: number;
+  sucesso: boolean;
+  concluido: boolean;
+};
+
+/** Retorno de reservar_uso_ia: se a geração cabe no limite da janela. */
+export type ReservaUsoIa = {
+  permitido: boolean;
+  usos: number;
+  /** Quando a próxima vaga abre (só quando bloqueado). */
+  liberado_em: string | null;
+  /** Id do uso reservado (só quando permitido). */
+  uso_id: string | null;
+};

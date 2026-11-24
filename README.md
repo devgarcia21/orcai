@@ -6,7 +6,7 @@ O Orçaí é um SaaS para prestadores de serviço brasileiros (eletricistas, enc
 pedreiros, oficinas) criarem orçamentos bonitos e claros direto do celular, enviarem ao
 cliente pelo WhatsApp e receberem o sinal por PIX.
 
-> 🚧 Em construção. Etapa atual: **5 — pagamento do sinal por PIX (QR Code estático)**.
+> 🚧 Em construção. Etapa atual: **6 — montar orçamentos com IA (texto ou voz)**.
 
 ## O que já funciona
 
@@ -22,6 +22,8 @@ cliente pelo WhatsApp e receberem o sinal por PIX.
 - Linha do tempo no painel: criado, enviado, visualizado pelo cliente, resposta e sinal recebido
 - Pagamento do sinal por PIX: depois de aprovar, o cliente vê o QR Code e o "Pix Copia e Cola"
   com o valor do sinal (ou do total, se o sinal for 0%); o QR também sai no PDF
+- **Montar com IA**: descreva (ou dite) o serviço — "trocar 3 tomadas e instalar um chuveiro" —
+  e a IA sugere os itens com unidade e quantidade; você revisa e adiciona ao orçamento
 
 ## Sobre o pagamento por PIX
 
@@ -33,10 +35,29 @@ e clica em "Marcar sinal como recebido" (dá para desfazer se marcar por engano)
 **Evolução futura:** integrar um gateway de pagamento (ex.: Mercado Pago ou Efí) para gerar
 cobranças PIX dinâmicas e confirmar o pagamento automaticamente via webhook.
 
+## Sobre a IA
+
+O bloco **Montar com IA** usa a API do Google Gemini (plano gratuito), só no servidor.
+
+- **A IA nunca inventa preço.** Ela recebe como referência até 50 itens que você já usou em
+  orçamentos anteriores e só indica qual deles corresponde a cada item; o valor vem do seu
+  histórico. Sem correspondência, o campo fica vazio e destacado com "Defina o valor".
+- A resposta vem em JSON com schema e é validada antes de aparecer; nada é salvo sozinho.
+- Limites: 30 gerações por hora por prestador e textos de até 1.500 caracteres.
+- O ditado usa o reconhecimento de voz do navegador (Chrome, Edge, Safari) e só aparece em
+  `https://` ou `localhost`.
+- Sem a chave configurada, o bloco aparece desativado e o resto do app funciona normalmente.
+
+**Como obter a chave grátis:** entre no [Google AI Studio](https://aistudio.google.com/apikey)
+com uma conta Google, clique em **Create API key** e copie a chave para `GEMINI_API_KEY` no
+`.env.local`. Opcionalmente, troque o modelo em `GEMINI_MODEL` (padrão:
+`gemini-3.5-flash-lite`). A IA fica isolada atrás de uma interface (`src/lib/ia/provedor.ts`):
+trocar de provedor é criar outra implementação.
+
 ## Tecnologias
 
 Next.js 16 (App Router) · TypeScript · Tailwind CSS · shadcn/ui · Supabase (Auth,
-Postgres, Storage) · zod · Server Actions · React PDF · Vitest
+Postgres, Storage) · Google Gemini · zod · Server Actions · React PDF · Vitest
 
 ## Como rodar
 
@@ -52,7 +73,7 @@ Postgres, Storage) · zod · Server Actions · React PDF · Vitest
 2. Copie `.env.local.example` para `.env.local` e preencha com a URL e a chave
    publicável do seu projeto Supabase (_Project Settings → API Keys_) e com o endereço
    do app em `NEXT_PUBLIC_APP_URL` (ex.: `http://localhost:3000`), usado nos links
-   enviados aos clientes.
+   enviados aos clientes. Para a IA, preencha `GEMINI_API_KEY` (veja "Sobre a IA").
 
 3. No Supabase, abra o **SQL Editor** e execute, **em ordem**, cada arquivo de
    `supabase/migrations/`:
@@ -60,6 +81,7 @@ Postgres, Storage) · zod · Server Actions · React PDF · Vitest
    2. `002_clientes_orcamentos.sql`
    3. `003_link_publico.sql`
    4. `004_pix_sinal.sql`
+   5. `005_uso_ia.sql`
 
    (Os scripts podem ser executados mais de uma vez sem erro.)
 
@@ -100,6 +122,9 @@ Postgres, Storage) · zod · Server Actions · React PDF · Vitest
 - **Gerador de PIX próprio e testado**: o "Pix Copia e Cola" (formato EMV + CRC16) reproduz
   byte a byte o exemplo oficial do Banco Central, e um teste decodifica o QR Code desenhado
   com um leitor independente (jsQR) para garantir que ele é legível.
+- **IA sem preço inventado e à prova de "ignore as regras"**: o texto do prestador vai como
+  dado dentro de um JSON, a resposta é validada item a item com zod e o valor só pode vir do
+  histórico de preços do próprio prestador. O limite por hora é conferido no banco antes da chamada.
 - **Link público seguro**: o cliente acessa por um token aleatório de 192 bits, sem login,
   e as tabelas continuam fechadas — a leitura e a resposta passam por funções do banco que
   devolvem só o necessário (testadas com Postgres real no PGlite).
@@ -111,6 +136,6 @@ Postgres, Storage) · zod · Server Actions · React PDF · Vitest
 3. ✅ PDF profissional
 4. ✅ Link público com aprovar/recusar e envio por WhatsApp
 5. ✅ QR Code PIX estático do sinal
-6. IA que transforma texto ou áudio em itens de orçamento
+6. ✅ IA que transforma texto ou voz em itens de orçamento
 7. Painel com métricas
 8. Testes e deploy
