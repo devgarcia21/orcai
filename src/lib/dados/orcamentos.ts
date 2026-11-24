@@ -29,6 +29,7 @@ type LinhaListagem = Pick<
   | "cliente_id"
   | "desconto_centavos"
   | "percentual_sinal"
+  | "visualizado_em"
 > & {
   cliente: { nome: string } | null;
   itens: { quantidade: number | string; valor_unitario_centavos: number }[];
@@ -55,13 +56,14 @@ function paraResumo(linha: LinhaListagem): OrcamentoResumo {
     status: linha.status,
     created_at: linha.created_at,
     cliente_id: linha.cliente_id,
+    visualizado_em: linha.visualizado_em,
     cliente_nome: linha.cliente?.nome ?? "Cliente removido",
     total_centavos: total,
   };
 }
 
 const COLUNAS_LISTAGEM =
-  "id, numero, titulo, status, created_at, cliente_id, desconto_centavos, percentual_sinal, cliente:clientes(nome), itens:itens_orcamento(quantidade, valor_unitario_centavos)";
+  "id, numero, titulo, status, created_at, cliente_id, desconto_centavos, percentual_sinal, visualizado_em, cliente:clientes(nome), itens:itens_orcamento(quantidade, valor_unitario_centavos)";
 
 /**
  * Orçamentos do prestador, do mais recente para o mais antigo.

@@ -7,7 +7,7 @@ import { calcularResumo, totalItem } from "@/lib/orcamento/calculos";
 import { numeroComZeros, ROTULOS_UNIDADE } from "@/lib/orcamento/regras";
 import { OPCOES_CHAVE_PIX } from "@/lib/pix";
 import { nomeDeExibicao } from "@/lib/prestador";
-import type { OrcamentoCompleto, Prestador } from "@/lib/types/database";
+import type { OrcamentoDocumento, Prestador } from "@/lib/types/database";
 
 import { FONTE_PDF, registrarFontes } from "./fontes";
 
@@ -24,7 +24,8 @@ export type DadosPdfOrcamento = {
     Prestador,
     "nome" | "nome_empresa" | "telefone" | "cidade" | "tipo_chave_pix" | "chave_pix"
   >;
-  orcamento: OrcamentoCompleto;
+  /** Serve tanto para o painel (OrcamentoCompleto) quanto para o link público. */
+  orcamento: OrcamentoDocumento;
   logo: LogoPdf | null;
 };
 
@@ -206,7 +207,7 @@ function Cabecalho({ prestador, orcamento, logo }: DadosPdfOrcamento) {
   );
 }
 
-function DadosCliente({ cliente }: Pick<OrcamentoCompleto, "cliente">) {
+function DadosCliente({ cliente }: Pick<OrcamentoDocumento, "cliente">) {
   return (
     <View>
       <Text style={estilos.rotuloSecao}>CLIENTE</Text>
@@ -218,7 +219,7 @@ function DadosCliente({ cliente }: Pick<OrcamentoCompleto, "cliente">) {
   );
 }
 
-function TabelaItens({ itens }: Pick<OrcamentoCompleto, "itens">) {
+function TabelaItens({ itens }: Pick<OrcamentoDocumento, "itens">) {
   return (
     <View style={estilos.tabela}>
       {/* fixed: repete o cabeçalho em cada página por onde a tabela continuar */}
@@ -233,7 +234,8 @@ function TabelaItens({ itens }: Pick<OrcamentoCompleto, "itens">) {
       {itens.map((item, i) => (
         // wrap={false}: uma linha nunca é cortada ao meio entre páginas
         <View
-          key={item.id}
+          // A ordem dos itens é fixa no documento; a versão pública não tem ids.
+          key={i}
           style={[estilos.linha, i % 2 === 1 ? estilos.linhaPar : {}]}
           wrap={false}
         >

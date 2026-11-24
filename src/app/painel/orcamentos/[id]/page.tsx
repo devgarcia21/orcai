@@ -7,6 +7,11 @@ import { Suspense } from "react";
 import { CabecalhoPagina, LinkVoltar } from "@/components/comum/cabecalho-pagina";
 import { AcoesOrcamento } from "@/components/orcamentos/acoes-orcamento";
 import { BadgeStatus } from "@/components/orcamentos/badge-status";
+import {
+  CondicoesObservacoes,
+  ItensOrcamento,
+} from "@/components/orcamentos/conteudo-orcamento";
+import { LinhaDoTempo } from "@/components/orcamentos/linha-do-tempo";
 import { ResumoValores } from "@/components/orcamentos/resumo-valores";
 import { EsqueletoDetalheOrcamento } from "@/components/painel/esqueletos";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,22 +20,16 @@ import { obterPrestadorAtual } from "@/lib/dados/prestador";
 import { nomeDeExibicao } from "@/lib/prestador";
 import { formatarData, hojeISO } from "@/lib/datas";
 import { formatarTelefone } from "@/lib/formatacao";
-import { formatarMoeda, formatarQuantidade } from "@/lib/moeda";
-import { calcularResumo, totalItem } from "@/lib/orcamento/calculos";
-import { formatarNumeroOrcamento, ROTULOS_UNIDADE } from "@/lib/orcamento/regras";
+import { montarEnvio } from "@/lib/envio-orcamento";
+import { calcularResumo } from "@/lib/orcamento/calculos";
+import {
+  formatarNumeroOrcamento,
+  orcamentoVencido,
+  podeEnviar,
+} from "@/lib/orcamento/regras";
 import { rotaCliente, ROTAS } from "@/lib/rotas";
 
 export const metadata: Metadata = { title: "Orçamento" };
-
-function BlocoTexto({ titulo, texto }: { titulo: string; texto: string | null }) {
-  if (!texto) return null;
-  return (
-    <div>
-      <h3 className="mb-1 text-sm font-semibold">{titulo}</h3>
-      <p className="text-sm whitespace-pre-line text-muted-foreground">{texto}</p>
-    </div>
-  );
-}
 
 type Params = PageProps<"/painel/orcamentos/[id]">["params"];
 
@@ -49,10 +48,13 @@ async function DetalheOrcamento({ params }: { params: Params }) {
     orcamento.percentual_sinal,
   );
   const numero = formatarNumeroOrcamento(orcamento.numero);
+  // Com link já gerado, os botões de envio funcionam direto no clique.
+  const envio =
+    orcamento.token_publico && podeEnviar(orcamento.status)
+      ? await montarEnvio(orcamento, prestador, orcamento.token_publico)
+      : null;
   const vencido =
-    orcamento.valido_ate !== null &&
-    orcamento.valido_ate < hojeISO() &&
-    (orcamento.status === "rascunho" || orcamento.status === "enviado");
+    podeEnviar(orcamento.status) && orcamentoVencido(orcamento.valido_ate, hojeISO());
 
   return (
     <div className="grid gap-6">
@@ -81,6 +83,7 @@ async function DetalheOrcamento({ params }: { params: Params }) {
               status: orcamento.status,
               numeroFormatado: numero,
             }}
+            envio={envio}
           />
         </CardContent>
       </Card>
@@ -138,55 +141,25 @@ async function DetalheOrcamento({ params }: { params: Params }) {
             </Card>
           </div>
 
-          {/* Itens */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Itens ({itens.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ol className="divide-y">
-                {itens.map((item, i) => (
-                  <li key={item.id} className="flex gap-3 py-3 first:pt-0 last:pb-0">
-                    <span className="w-5 shrink-0 text-sm text-muted-foreground tabular-nums">
-                      {i + 1}.
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium break-words">{item.descricao}</p>
-                      <p className="text-sm text-muted-foreground tabular-nums">
-                        {formatarQuantidade(item.quantidade)}{" "}
-                        {ROTULOS_UNIDADE[item.unidade].curto} ×{" "}
-                        {formatarMoeda(item.valor_unitario_centavos)}
-                      </p>
-                    </div>
-                    <span className="shrink-0 font-medium tabular-nums">
-                      {formatarMoeda(totalItem(item))}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            </CardContent>
-          </Card>
-
-          {(orcamento.condicoes_pagamento || orcamento.observacoes) && (
-            <Card>
-              <CardContent className="grid gap-4">
-                <BlocoTexto
-                  titulo="Condições de pagamento"
-                  texto={orcamento.condicoes_pagamento}
-                />
-                <BlocoTexto titulo="Observações" texto={orcamento.observacoes} />
-              </CardContent>
-            </Card>
-          )}
+          <ItensOrcamento itens={itens} />
+          <CondicoesObservacoes {...orcamento} />
         </div>
 
-        <aside className="lg:sticky lg:top-20">
+        <aside className="grid gap-6 lg:sticky lg:top-20">
           <Card>
             <CardHeader>
               <CardTitle>Valores</CardTitle>
             </CardHeader>
             <CardContent>
               <ResumoValores resumo={resumo} />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Andamento</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <LinhaDoTempo {...orcamento} />
             </CardContent>
           </Card>
         </aside>

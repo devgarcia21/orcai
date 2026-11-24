@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Só em desenvolvimento: permite abrir o app no celular pela rede Wi-Fi
+  // (http://192.168.x.x:3000). Sem isso o Next 16 bloqueia os arquivos de dev.
+  allowedDevOrigins: ["192.168.*.*", "10.*.*.*", "172.*.*.*"],
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

@@ -1,4 +1,4 @@
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Eye } from "lucide-react";
 import Link from "next/link";
 
 import { formatarData } from "@/lib/datas";
@@ -8,6 +8,21 @@ import { rotaOrcamento } from "@/lib/rotas";
 import type { OrcamentoResumo } from "@/lib/types/database";
 
 import { BadgeStatus } from "./badge-status";
+
+/** "Visualizado": enviado e o cliente já abriu o link (ainda sem resposta). */
+function IndicadorVisualizado({
+  orcamento,
+}: {
+  orcamento: Pick<OrcamentoResumo, "status" | "visualizado_em">;
+}) {
+  if (orcamento.status !== "enviado" || !orcamento.visualizado_em) return null;
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-700">
+      <Eye className="size-3.5" aria-hidden />
+      Visualizado
+    </span>
+  );
+}
 
 type Props = {
   orcamentos: OrcamentoResumo[];
@@ -42,7 +57,10 @@ export function TabelaOrcamentos({ orcamentos, ocultarCliente }: Props) {
                     </p>
                   )}
                 </div>
-                <BadgeStatus status={o.status} />
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <BadgeStatus status={o.status} />
+                  <IndicadorVisualizado orcamento={o} />
+                </div>
               </div>
               <p className="mt-3 text-lg font-semibold tabular-nums">
                 {formatarMoeda(o.total_centavos)}
@@ -90,7 +108,10 @@ export function TabelaOrcamentos({ orcamentos, ocultarCliente }: Props) {
                   {formatarData(o.created_at)}
                 </td>
                 <td className="px-4 py-3">
-                  <BadgeStatus status={o.status} />
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <BadgeStatus status={o.status} />
+                    <IndicadorVisualizado orcamento={o} />
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-right font-medium tabular-nums">
                   {formatarMoeda(o.total_centavos)}

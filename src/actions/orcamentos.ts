@@ -158,10 +158,17 @@ export async function alterarStatusOrcamento(
     );
   }
 
+  // Mantém a linha do tempo coerente quando o prestador registra à mão.
+  const agora = new Date().toISOString();
+  const datas =
+    status.data === "enviado"
+      ? { enviado_em: atual.enviado_em ?? agora }
+      : { respondido_em: agora };
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("orcamentos")
-    .update({ status: status.data })
+    .update({ status: status.data, ...datas })
     .eq("id", id)
     .eq("prestador_id", atual.prestador_id);
 

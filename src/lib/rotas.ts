@@ -32,3 +32,11 @@ export function destinoSeguro(next: unknown, padrao: string = ROTAS.painel): str
 /** PDF do orçamento; com download=true o navegador baixa em vez de abrir. */
 export const rotaPdfOrcamento = (id: string, download = false) =>
   `${ROTAS.orcamentos}/${id}/pdf${download ? "?download=1" : ""}`;
+
+/** Página pública do orçamento (para o cliente, sem login). */
+export const rotaPublicaOrcamento = (token: string) => `/o/${token}`;
+export const rotaPdfPublico = (token: string, download = false) =>
+  `/o/${token}/pdf${download ? "?download=1" : ""}`;
+
+/** Formato do token público (base64url, 32 caracteres) — evita consultas com lixo. */
+export const tokenPublicoValido = (token: string) => /^[A-Za-z0-9_-]{20,64}$/.test(token);

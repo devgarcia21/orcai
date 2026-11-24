@@ -9,6 +9,14 @@ const MENSAGENS_BANCO: Record<string, string> = {
     "Este orçamento já foi aprovado ou recusado e não pode mais ser alterado. Duplique-o para criar um novo.",
   orcamento_nao_encontrado: "Orçamento não encontrado.",
   orcamento_sem_itens: "Adicione pelo menos um item ao orçamento.",
+  // Link público (migration 003)
+  orcamento_nao_enviavel:
+    "Só rascunhos e orçamentos enviados podem ser enviados ao cliente.",
+  orcamento_ja_respondido: "Este orçamento já foi respondido.",
+  orcamento_vencido:
+    "Este orçamento está vencido. Fale com o prestador para pedir um novo.",
+  acao_invalida: "Resposta inválida.",
+  motivo_muito_longo: "O motivo pode ter no máximo 500 caracteres.",
 };
 
 /**

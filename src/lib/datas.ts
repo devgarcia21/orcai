@@ -54,3 +54,15 @@ export function formatarData(valor: string): string {
   if (partes) return `${partes[3]}/${partes[2]}/${partes[1]}`;
   return formatadorDataHora.format(new Date(valor));
 }
+
+const formatadorHora = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: FUSO_BRASIL,
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+/** Timestamp → "23/11/2026 às 14:05" (fuso de São Paulo). */
+export function formatarDataHora(timestamp: string): string {
+  const data = new Date(timestamp);
+  return `${formatadorDataHora.format(data)} às ${formatadorHora.format(data)}`;
+}

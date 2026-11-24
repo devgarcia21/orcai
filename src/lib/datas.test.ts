@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { adicionarDias, dataISOValida, formatarData, hojeISO } from "./datas";
+import {
+  adicionarDias,
+  dataISOValida,
+  formatarData,
+  formatarDataHora,
+  hojeISO,
+} from "./datas";
 
 describe("formatarData", () => {
   it("converte AAAA-MM-DD para DD/MM/AAAA sem mudar o dia", () => {
@@ -39,5 +45,13 @@ describe("dataISOValida", () => {
     expect(dataISOValida("2026-02-30")).toBe(false);
     expect(dataISOValida("23/11/2026")).toBe(false);
     expect(dataISOValida("")).toBe(false);
+  });
+});
+
+describe("formatarDataHora", () => {
+  it("mostra data e hora no fuso de São Paulo", () => {
+    expect(formatarDataHora("2026-11-23T17:05:00Z")).toBe("23/11/2026 às 14:05");
+    // 01:30 UTC do dia 24 ainda é 22:30 do dia 23 em São Paulo
+    expect(formatarDataHora("2026-11-24T01:30:00Z")).toBe("23/11/2026 às 22:30");
   });
 });

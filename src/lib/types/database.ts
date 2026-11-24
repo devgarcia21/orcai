@@ -68,6 +68,12 @@ export type Orcamento = {
   valido_ate: string | null;
   condicoes_pagamento: string | null;
   observacoes: string | null;
+  /** Segredo do link público (/o/[token]); null até o primeiro envio. */
+  token_publico: string | null;
+  enviado_em: string | null;
+  visualizado_em: string | null;
+  respondido_em: string | null;
+  motivo_recusa: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -93,7 +99,7 @@ export type OrcamentoCompleto = Orcamento & {
 /** Linha das listagens: orçamento + nome do cliente + total já calculado. */
 export type OrcamentoResumo = Pick<
   Orcamento,
-  "id" | "numero" | "titulo" | "status" | "created_at" | "cliente_id"
+  "id" | "numero" | "titulo" | "status" | "created_at" | "cliente_id" | "visualizado_em"
 > & {
   cliente_nome: string;
   total_centavos: number;
@@ -101,3 +107,52 @@ export type OrcamentoResumo = Pick<
 
 /** Cliente com a quantidade de orçamentos (para bloquear a exclusão). */
 export type ClienteComContagem = Cliente & { total_orcamentos: number };
+
+// --- Documento (PDF e páginas de visualização) ------------------------------
+
+/**
+ * O mínimo para exibir um orçamento (PDF, lista de itens, resumo).
+ * Atendido tanto por OrcamentoCompleto (painel) quanto por OrcamentoPublico.
+ */
+export type OrcamentoDocumento = Pick<
+  Orcamento,
+  | "numero"
+  | "titulo"
+  | "created_at"
+  | "valido_ate"
+  | "desconto_centavos"
+  | "percentual_sinal"
+  | "condicoes_pagamento"
+  | "observacoes"
+> & {
+  cliente: Pick<Cliente, "nome" | "telefone" | "email" | "endereco">;
+  itens: Pick<
+    ItemOrcamento,
+    "descricao" | "quantidade" | "unidade" | "valor_unitario_centavos"
+  >[];
+};
+
+/** Dados públicos do prestador (o que o cliente pode ver). */
+export type PrestadorPublico = Pick<
+  Prestador,
+  | "nome"
+  | "nome_empresa"
+  | "telefone"
+  | "cidade"
+  | "logo_url"
+  | "tipo_chave_pix"
+  | "chave_pix"
+>;
+
+// --- Link público ------------------------------------------------------------
+
+/** Retorno de obter_orcamento_publico (migration 003): sem ids internos. */
+export type OrcamentoPublico = OrcamentoDocumento &
+  Pick<Orcamento, "status" | "enviado_em" | "respondido_em"> & {
+    /** Calculado no banco com a data de hoje no Brasil. */
+    vencido: boolean;
+    prestador: PrestadorPublico;
+  };
+
+export const ACOES_RESPOSTA = ["aprovar", "recusar"] as const;
+export type AcaoResposta = (typeof ACOES_RESPOSTA)[number];

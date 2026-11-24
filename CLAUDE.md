@@ -39,7 +39,8 @@ Antes de commitar: `lint`, `typecheck`, `test` e `build` precisam passar.
 ```
 src/
   proxy.ts                  # (antigo middleware) renova sessão e protege /painel/*
-  actions/                  # Server Actions: auth, perfil, clientes, orcamentos
+  actions/                  # Server Actions: auth, perfil, clientes, orcamentos,
+                            # envio (prestador) e publico (cliente, sem login)
   app/
     page.tsx                # landing
     (auth)/login, cadastro  # telas públicas de autenticação
@@ -49,6 +50,7 @@ src/
       orcamentos/ novo/ [id]/ [id]/editar/
       orcamentos/[id]/pdf/route.ts  # PDF do orçamento (Route Handler)
       perfil/
+    o/[token]/              # página PÚBLICA do cliente (sem login) + pdf/route.ts + not-found
   components/
     ui/                     # componentes shadcn (não editar à toa)
     comum/                  # EstadoVazio, CabecalhoPagina, CampoBusca, ConfirmarAcao
@@ -56,6 +58,8 @@ src/
                             # InputMoeda, SelectNativo, Secao
     painel/esqueletos.tsx   # esqueletos de carregamento, no formato de cada conteúdo
     clientes/ orcamentos/ painel/ perfil/ auth/   # componentes por domínio
+    publico/                # página do cliente: resposta, visualização, PIX, status
+    orcamentos/conteudo-orcamento.tsx  # itens e condições (painel E página pública)
   hooks/use-acao-formulario.ts  # liga <form> a uma Server Action
   lib/
     orcamento/calculos.ts   # ⭐ ÚNICA fonte dos cálculos (tela e servidor) + testes
@@ -64,6 +68,9 @@ src/
     busca.ts                # busca sem acento
     pdf/                    # documento react-pdf, geração, nome do arquivo, fontes Inter (+ testes)
     prestador.ts            # nomeDeExibicao, perfilCompleto (puros: usados no app e no PDF)
+    whatsapp.ts             # telefone → wa.me, link com mensagem, textos padrão (+ testes)
+    envio-orcamento.ts      # monta link público + link do WhatsApp (servidor)
+    url-app.ts              # base dos links (NEXT_PUBLIC_APP_URL) · copiar.ts (clipboard)
     supabase/               # clientes browser/server/proxy, env, tradução de erros
     dados/                  # leitura de dados no servidor (com React cache)
     validacoes/             # schemas zod (comum, auth, perfil, cliente, orcamento)
@@ -204,6 +211,43 @@ fallback={<Esqueleto/>}><Dados params={params}/></Suspense></> }`. Nunca faça `
 - Nome do arquivo: `orcamento-0001-nome-do-cliente.pdf` (`nomeArquivoPdf`, sem acentos).
 - Para inspecionar visualmente: `PDF_AMOSTRA=caminho.pdf npm test` grava um PDF de 60 itens.
 
+### Link público e WhatsApp (Etapa 4)
+
+- **Tabelas continuam fechadas para `anon`.** O cliente só vê o orçamento por duas
+  funções `SECURITY DEFINER` (search_path fixo) liberadas para anon: `obter_orcamento_publico`
+  (só os campos que o cliente precisa, sem ids; rascunho/token errado → null) e
+  `responder_orcamento` (só status `enviado` e dentro da validade; `for update` contra
+  respostas simultâneas). O painel usa `preparar_envio_orcamento` (security invoker → RLS).
+- **Token**: 24 bytes de `pgcrypto.gen_random_bytes` (192 bits) em base64url, 32 caracteres,
+  `unique`. Gerado no primeiro envio e reaproveitado; duplicar não copia o token.
+- **Visualização NÃO é registrada no servidor**: o robô de prévia do WhatsApp abre o link
+  assim que o prestador manda a mensagem e marcaria tudo como "visualizado". O servidor
+  sempre lê com `p_registrar_visualizacao = false`; o componente `RegistrarVisualizacao`
+  chama a action no navegador depois de carregar (robôs não executam JS). Visitas do
+  próprio prestador logado também não contam (o banco compara com `auth.uid()`).
+- `proteger_orcamento` (migration 003) passou a permitir **só** preencher `visualizado_em`
+  em aprovados/recusados (o cliente pode abrir depois de o prestador aprovar à mão).
+- **Envio**: "Copiar link" também passa o rascunho para enviado (sem isso o link daria 404).
+  No primeiro envio, a aba do WhatsApp é aberta **no clique** e recebe a URL depois que o
+  servidor gera o token (senão o Safari bloqueia como pop-up). Com token, é um `<a>` direto.
+- Copiar usa `navigator.clipboard` quando há contexto seguro e cai para `execCommand`
+  (celular em `http://192.168.x.x` não tem a API moderna); se falhar, mostra o link num campo.
+- Mudança manual de status no painel também grava `enviado_em`/`respondido_em`
+  (linha do tempo coerente). Não há notificação push: o prestador vê a resposta no painel.
+- **Datas**: vencido = `valido_ate < hoje no Brasil` (válido até hoje ainda vale), mesma
+  regra no SQL (`hoje_brasil()`) e no app (`orcamentoVencido`, `clientePodeResponder`).
+- **Prévia do link**: `generateMetadata` monta "Orçamento Nº 0001 – Empresa" + total. O
+  Next espera os metadados para robôs sem JS (WhatsApp está na lista `htmlLimitedBots`),
+  então eles saem no `<head>`. `/o/*` tem `robots: noindex` (layout) e o PDF, `X-Robots-Tag`.
+- **404 do token**: para robôs a resposta é 404; no navegador a página chega por streaming,
+  que sempre começa com 200 (o Next adiciona `noindex`). Comportamento documentado do Next.
+- **PDF público** reutiliza o mesmo documento: o PDF e os blocos de conteúdo recebem o tipo
+  mínimo `OrcamentoDocumento` (sem ids), atendido pelo painel e pela página pública.
+- `allowedDevOrigins` libera IPs de rede local no dev (teste no celular pelo Wi-Fi).
+- Verificado de ponta a ponta num navegador automático com um Supabase falso (copiar
+  link, WhatsApp, prévia do robô, aprovar, recusar com motivo, vencido, 404, PDF e linha
+  do tempo) e as funções SQL no PGlite (53 casos, incluindo isolamento entre prestadores).
+
 ## Convenções
 
 - Mensagens de erro em português, claras e acionáveis ("Digite um telefone válido com DDD").
@@ -211,7 +255,9 @@ fallback={<Esqueleto/>}><Dados params={params}/></Suspense></> }`. Nunca faça `
   `useAcaoFormulario`. Nada de lógica de validação duplicada.
 - Confirmações destrutivas: `ConfirmarAcao` (com `bloqueio` quando a ação não é permitida).
 - Listas vazias: `EstadoVazio` com uma ação clara.
-- Novas tabelas: sempre em nova migration numerada (`003_...sql`), idempotente, com RLS.
+- Novas tabelas: sempre em nova migration numerada (`004_...sql`), idempotente, com RLS.
+- Acesso público a dados: nunca abrir tabelas para anon; usar função SECURITY DEFINER
+  com search_path fixo que devolve só o necessário (e testar no PGlite).
 - Tipos do banco só em `lib/types/database.ts`. Rotas só via `lib/rotas.ts`.
 - Regra de negócio nova = função pura em `lib/` + teste no Vitest.
 - Página nova no painel = casca síncrona + `<Suspense>` com esqueleto em volta dos dados.
@@ -221,7 +267,7 @@ fallback={<Esqueleto/>}><Dados params={params}/></Suspense></> }`. Nunca faça `
 - [x] **Etapa 1** — Base: projeto, login, cadastro e perfil do prestador
 - [x] **Etapa 2** — Clientes e orçamentos com itens
 - [x] **Etapa 3** — PDF profissional do orçamento (+ navegação instantânea no painel)
-- [ ] **Etapa 4** — Link público com aprovar/recusar e envio por WhatsApp
+- [x] **Etapa 4** — Link público com aprovar/recusar e envio por WhatsApp
 - [ ] **Etapa 5** — QR Code PIX estático do sinal
 - [ ] **Etapa 6** — IA que transforma texto ou áudio em itens de orçamento
 - [ ] **Etapa 7** — Painel com métricas

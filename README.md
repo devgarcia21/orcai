@@ -6,7 +6,7 @@ O Orçaí é um SaaS para prestadores de serviço brasileiros (eletricistas, enc
 pedreiros, oficinas) criarem orçamentos bonitos e claros direto do celular, enviarem ao
 cliente pelo WhatsApp e receberem o sinal por PIX.
 
-> 🚧 Em construção. Etapa atual: **3 — PDF profissional do orçamento**.
+> 🚧 Em construção. Etapa atual: **4 — link público, aprovação pelo cliente e envio pelo WhatsApp**.
 
 ## O que já funciona
 
@@ -17,6 +17,9 @@ cliente pelo WhatsApp e receberem o sinal por PIX.
 - Status (rascunho, enviado, aprovado, recusado), duplicar e excluir
 - PDF profissional do orçamento (A4, com logo, tabela de itens, totais e chave PIX), para ver ou baixar
 - Navegação instantânea no painel: a tela aparece na hora e os dados chegam em seguida
+- Envio pelo WhatsApp com mensagem pronta e link público do orçamento
+- Página do cliente (sem login): ver itens e totais, copiar a chave PIX, baixar o PDF e aprovar ou recusar
+- Linha do tempo no painel: criado, enviado, visualizado pelo cliente e resposta
 
 ## Tecnologias
 
@@ -35,12 +38,15 @@ Postgres, Storage) · zod · Server Actions · React PDF · Vitest
    ```
 
 2. Copie `.env.local.example` para `.env.local` e preencha com a URL e a chave
-   publicável do seu projeto Supabase (_Project Settings → API Keys_).
+   publicável do seu projeto Supabase (_Project Settings → API Keys_) e com o endereço
+   do app em `NEXT_PUBLIC_APP_URL` (ex.: `http://localhost:3000`), usado nos links
+   enviados aos clientes.
 
 3. No Supabase, abra o **SQL Editor** e execute, **em ordem**, cada arquivo de
    `supabase/migrations/`:
    1. `001_inicial.sql`
    2. `002_clientes_orcamentos.sql`
+   3. `003_link_publico.sql`
 
    (Os scripts podem ser executados mais de uma vez sem erro.)
 
@@ -78,13 +84,16 @@ Postgres, Storage) · zod · Server Actions · React PDF · Vitest
   rodapé e que nenhuma linha foi cortada.
 - **Navegação instantânea** com Cache Components: cada página tem uma casca estática e
   os dados do usuário chegam em streaming, com esqueletos no lugar exato do conteúdo.
+- **Link público seguro**: o cliente acessa por um token aleatório de 192 bits, sem login,
+  e as tabelas continuam fechadas — a leitura e a resposta passam por funções do banco que
+  devolvem só o necessário (testadas com Postgres real no PGlite).
 
 ## Roadmap
 
 1. ✅ Base: login, cadastro e perfil do prestador
 2. ✅ Clientes e orçamentos com itens
 3. ✅ PDF profissional
-4. Link público com aprovar/recusar e envio por WhatsApp
+4. ✅ Link público com aprovar/recusar e envio por WhatsApp
 5. QR Code PIX estático do sinal
 6. IA que transforma texto ou áudio em itens de orçamento
 7. Painel com métricas

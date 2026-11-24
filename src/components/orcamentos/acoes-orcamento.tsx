@@ -22,11 +22,13 @@ import { ConfirmarAcao } from "@/components/comum/confirmar-acao";
 import { MensagemFormulario } from "@/components/formulario/mensagem-formulario";
 import { Button, buttonVariants } from "@/components/ui/button";
 import type { EstadoAcao } from "@/lib/acoes";
-import { orcamentoEditavel, proximosStatus } from "@/lib/orcamento/regras";
+import type { DadosEnvio } from "@/lib/envio-orcamento";
+import { orcamentoEditavel, podeEnviar, proximosStatus } from "@/lib/orcamento/regras";
 import { rotaEditarOrcamento } from "@/lib/rotas";
 import type { StatusOrcamento } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 
+import { BotoesEnvio } from "./botoes-envio";
 import { BotoesPdf } from "./botoes-pdf";
 
 const ACAO_STATUS: Record<
@@ -50,9 +52,11 @@ const ACAO_STATUS: Record<
 
 type Props = {
   orcamento: { id: string; status: StatusOrcamento; numeroFormatado: string };
+  /** Link público e WhatsApp já prontos (quando o orçamento já foi enviado). */
+  envio: DadosEnvio | null;
 };
 
-export function AcoesOrcamento({ orcamento }: Props) {
+export function AcoesOrcamento({ orcamento, envio }: Props) {
   const [resultado, setResultado] = useState<EstadoAcao | null>(null);
   const [duplicando, iniciarDuplicar] = useTransition();
   const [mudandoStatus, iniciarStatus] = useTransition();
@@ -76,6 +80,14 @@ export function AcoesOrcamento({ orcamento }: Props) {
   return (
     <div className="grid gap-3">
       {resultado && <MensagemFormulario estado={resultado} />}
+
+      {podeEnviar(orcamento.status) && (
+        <BotoesEnvio
+          orcamentoId={orcamento.id}
+          envio={envio}
+          rascunho={orcamento.status === "rascunho"}
+        />
+      )}
 
       {/* PDF disponível em qualquer status */}
       <BotoesPdf orcamentoId={orcamento.id} />

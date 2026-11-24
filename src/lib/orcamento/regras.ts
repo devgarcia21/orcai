@@ -47,3 +47,24 @@ export function formatarNumeroOrcamento(numero: number): string {
 export function numeroComZeros(numero: number): string {
   return String(numero).padStart(4, "0");
 }
+
+/**
+ * Vencido: a validade (data, sem hora) já passou. Válido até HOJE ainda vale.
+ * `hoje` vem de hojeISO() (fuso do Brasil), igual à regra do banco.
+ */
+export function orcamentoVencido(validoAte: string | null, hoje: string): boolean {
+  return validoAte !== null && validoAte < hoje;
+}
+
+/** O cliente só pode aprovar/recusar um orçamento enviado e dentro da validade. */
+export function clientePodeResponder(
+  orcamento: { status: StatusOrcamento; valido_ate: string | null },
+  hoje: string,
+): boolean {
+  return orcamento.status === "enviado" && !orcamentoVencido(orcamento.valido_ate, hoje);
+}
+
+/** O prestador pode enviar (WhatsApp / copiar link) rascunhos e orçamentos já enviados. */
+export function podeEnviar(status: StatusOrcamento): boolean {
+  return status === "rascunho" || status === "enviado";
+}
