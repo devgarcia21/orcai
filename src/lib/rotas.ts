@@ -28,3 +28,7 @@ export function destinoSeguro(next: unknown, padrao: string = ROTAS.painel): str
   if (next.startsWith("/\\")) return padrao;
   return next;
 }
+
+/** PDF do orçamento; com download=true o navegador baixa em vez de abrir. */
+export const rotaPdfOrcamento = (id: string, download = false) =>
+  `${ROTAS.orcamentos}/${id}/pdf${download ? "?download=1" : ""}`;

@@ -1,26 +1,29 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { BotaoNovoCliente, ListaClientes } from "@/components/clientes/lista-clientes";
 import { CabecalhoPagina } from "@/components/comum/cabecalho-pagina";
+import { EsqueletoListaClientes } from "@/components/painel/esqueletos";
 import { listarClientes } from "@/lib/dados/clientes";
 
 export const metadata: Metadata = { title: "Clientes" };
 
-export default async function ClientesPage() {
+async function Lista() {
   const clientes = await listarClientes();
+  return <ListaClientes clientes={clientes} />;
+}
 
+export default function ClientesPage() {
   return (
     <div className="grid gap-6">
       <CabecalhoPagina
         titulo="Clientes"
-        descricao={
-          clientes.length > 0
-            ? `${clientes.length} ${clientes.length === 1 ? "cliente cadastrado" : "clientes cadastrados"}`
-            : "Cadastre quem você atende para montar orçamentos mais rápido."
-        }
-        acoes={clientes.length > 0 && <BotaoNovoCliente />}
+        descricao="Cadastre quem você atende para montar orçamentos mais rápido."
+        acoes={<BotaoNovoCliente />}
       />
-      <ListaClientes clientes={clientes} />
+      <Suspense fallback={<EsqueletoListaClientes />}>
+        <Lista />
+      </Suspense>
     </div>
   );
 }

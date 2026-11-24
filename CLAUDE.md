@@ -47,12 +47,14 @@ src/
     painel/                 # área logada: layout (cabeçalho + navegação), error, not-found
       clientes/ [id]/       # lista com busca; detalhes + orçamentos do cliente
       orcamentos/ novo/ [id]/ [id]/editar/
+      orcamentos/[id]/pdf/route.ts  # PDF do orçamento (Route Handler)
       perfil/
   components/
     ui/                     # componentes shadcn (não editar à toa)
     comum/                  # EstadoVazio, CabecalhoPagina, CampoBusca, ConfirmarAcao
     formulario/             # Campo, CampoBase, BotaoEnviar, MensagemFormulario,
                             # InputMoeda, SelectNativo, Secao
+    painel/esqueletos.tsx   # esqueletos de carregamento, no formato de cada conteúdo
     clientes/ orcamentos/ painel/ perfil/ auth/   # componentes por domínio
   hooks/use-acao-formulario.ts  # liga <form> a uma Server Action
   lib/
@@ -60,6 +62,8 @@ src/
     orcamento/regras.ts     # status, transições, unidades, numeração #0001
     moeda.ts datas.ts       # R$ e datas pt-BR (+ testes)
     busca.ts                # busca sem acento
+    pdf/                    # documento react-pdf, geração, nome do arquivo, fontes Inter (+ testes)
+    prestador.ts            # nomeDeExibicao, perfilCompleto (puros: usados no app e no PDF)
     supabase/               # clientes browser/server/proxy, env, tradução de erros
     dados/                  # leitura de dados no servidor (com React cache)
     validacoes/             # schemas zod (comum, auth, perfil, cliente, orcamento)
@@ -98,13 +102,26 @@ supabase/migrations/        # SQL colado manualmente no SQL Editor do Supabase
 - **Idioma**: interface, mensagens, nomes de domínio (tabelas, colunas, funções) em
   português. Termos técnicos do framework continuam em inglês.
 
-### Cache Components (importante)
+### Cache Components e navegação instantânea (importante)
 
-- Dados por requisição (cookies, params, searchParams, Supabase) ficam dentro de
-  `<Suspense>`: o layout do painel envolve as páginas; o cabeçalho tem o seu próprio.
+- **Toda página do painel tem casca síncrona** (título, botões, link de voltar) e os
+  dados ficam em componentes `async` filhos, cada um dentro do seu `<Suspense>` com um
+  esqueleto no formato exato do conteúdo (`components/painel/esqueletos.tsx`).
+  Padrão: `export default function Pagina({ params }) { return <>casca<Suspense
+fallback={<Esqueleto/>}><Dados params={params}/></Suspense></> }`. Nunca faça `await`
+  no corpo do componente da página.
+- **Não há `<Suspense>` em volta de `{children}` no layout do painel, de propósito**:
+  numa navegação só re-renderiza o que está abaixo do layout compartilhado, e um
+  fallback do layout (já revelado) não reaparece — a troca ficava parada esperando os
+  dados (era o Insight "uncached data during a navigation"). Sem ele, um `await` no
+  topo de uma página quebra o build — é a proteção contra regressão.
+- Dados do usuário **nunca** vão para `"use cache"`: são sempre por requisição.
 - `createClient()` do servidor chama **`connection()`**: com `partialPrefetching`, os
   cookies ficam disponíveis no pré-render do App Shell, e o Supabase usa `Date.now()`
   para validar o token — o que é proibido no pré-render. Não remova.
+- Medido (build de produção, dados com 600 ms de atraso): antes, cada troca de página
+  ficava parada ~800 ms; depois, a casca aparece em 30–90 ms e os dados chegam em
+  streaming. No dev não há prefetch, então é mais lento (~200 ms) — normal.
 - `usePathname()` em rotas dinâmicas também exige `<Suspense>` (ver `navegacao.tsx`).
 - Nunca use `new Date()`, `Date.now()` ou `Math.random()` em componentes renderizados.
   Datas "de hoje" são calculadas no servidor (depois dos dados) e passadas por props.
@@ -162,6 +179,31 @@ supabase/migrations/        # SQL colado manualmente no SQL Editor do Supabase
 - Chaves de itens com contador local (não `crypto.randomUUID`, que não existe em
   `http://` fora do localhost); ids de campos por posição, estáveis entre SSR e navegador.
 
+### PDF (Etapa 3)
+
+- **Gerado no servidor** com `@react-pdf/renderer` em `app/painel/orcamentos/[id]/pdf/route.ts`.
+  Não logado → o proxy redireciona (e a rota ainda responde 401); orçamento de outro
+  prestador ou inexistente → 404. `?download=1` troca `inline` por `attachment`.
+  `Cache-Control: private, no-store` (documento com dados pessoais).
+- **Documento puro** (`lib/pdf/documento-orcamento.tsx`): recebe tudo por props, sem banco
+  nem rede — por isso é testável no Vitest. Valores só via `calculos.ts`, `moeda.ts`,
+  `datas.ts`, `formatacao.ts`. Nada de cálculo próprio.
+- **Fonte Inter** (WOFF, subconjunto latino, licença OFL em `lib/pdf/fontes/OFL.txt`),
+  lida do disco via `process.cwd()`; `outputFileTracingIncludes` em `next.config.ts`
+  garante que entre no pacote da rota em produção. Hifenização desligada (a padrão é inglês).
+- ⚠️ **Não use `lineHeight` no PDF**: com a Inter, qualquer `lineHeight` faz o react-pdf
+  4.9 sumir com o rodapé fixo (descoberto inspecionando os PDFs; coberto por teste que
+  extrai o texto com `pdfjs-dist` e confere "Página X de Y" em todas as páginas).
+- **Quebra de página**: cabeçalho da tabela com `fixed` (repete em cada página onde a
+  tabela continua), linhas com `wrap={false}` (nunca cortadas), resumo e caixa PIX com
+  `wrap={false}`. Tabela sem borda externa (ela desceria pelo espaço vazio ao quebrar).
+- **Rodapé** é o primeiro filho da página, `fixed` e absoluto: "Página X de Y" e "Gerado com Orçaí".
+- **Logo** baixada no servidor com timeout de 5 s e limite de tamanho; qualquer falha →
+  PDF sai só com o nome (nunca quebra por causa da logo).
+- **Data de emissão** = `created_at` do orçamento (o documento não muda a cada download).
+- Nome do arquivo: `orcamento-0001-nome-do-cliente.pdf` (`nomeArquivoPdf`, sem acentos).
+- Para inspecionar visualmente: `PDF_AMOSTRA=caminho.pdf npm test` grava um PDF de 60 itens.
+
 ## Convenções
 
 - Mensagens de erro em português, claras e acionáveis ("Digite um telefone válido com DDD").
@@ -172,12 +214,13 @@ supabase/migrations/        # SQL colado manualmente no SQL Editor do Supabase
 - Novas tabelas: sempre em nova migration numerada (`003_...sql`), idempotente, com RLS.
 - Tipos do banco só em `lib/types/database.ts`. Rotas só via `lib/rotas.ts`.
 - Regra de negócio nova = função pura em `lib/` + teste no Vitest.
+- Página nova no painel = casca síncrona + `<Suspense>` com esqueleto em volta dos dados.
 
 ## Roadmap
 
 - [x] **Etapa 1** — Base: projeto, login, cadastro e perfil do prestador
 - [x] **Etapa 2** — Clientes e orçamentos com itens
-- [ ] **Etapa 3** — PDF profissional do orçamento
+- [x] **Etapa 3** — PDF profissional do orçamento (+ navegação instantânea no painel)
 - [ ] **Etapa 4** — Link público com aprovar/recusar e envio por WhatsApp
 - [ ] **Etapa 5** — QR Code PIX estático do sinal
 - [ ] **Etapa 6** — IA que transforma texto ou áudio em itens de orçamento

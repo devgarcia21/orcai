@@ -37,13 +37,3 @@ export const obterPrestadorAtual = cache(async (): Promise<Prestador> => {
   }
   return data;
 });
-
-/** Perfil pronto para gerar orçamentos: precisa de telefone e chave PIX. */
-export function perfilCompleto(prestador: Prestador): boolean {
-  return Boolean(prestador.telefone && prestador.chave_pix);
-}
-
-/** Nome exibido no cabeçalho: empresa, se houver; senão o nome do prestador. */
-export function nomeDeExibicao(prestador: Prestador): string {
-  return prestador.nome_empresa || prestador.nome || "Meu negócio";
-}

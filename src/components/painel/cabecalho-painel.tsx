@@ -6,10 +6,11 @@ import { Suspense } from "react";
 import { sair } from "@/actions/auth";
 import { Marca } from "@/components/marca";
 import { Button } from "@/components/ui/button";
-import { nomeDeExibicao, obterPrestadorAtual } from "@/lib/dados/prestador";
+import { obterPrestadorAtual } from "@/lib/dados/prestador";
+import { nomeDeExibicao } from "@/lib/prestador";
 import { ROTAS } from "@/lib/rotas";
 
-import { CabecalhoCarregando } from "./carregando";
+import { EsqueletoIdentidade } from "./esqueletos";
 import { NavegacaoSuperior } from "./navegacao";
 
 /** Nome da empresa (ou do prestador) e logo, lidos do perfil. */
@@ -43,7 +44,7 @@ export function CabecalhoPainel() {
         <div className="flex min-w-0 items-center gap-3">
           <Marca href={ROTAS.painel} className="shrink-0" />
           <span className="h-6 w-px shrink-0 bg-border" aria-hidden />
-          <Suspense fallback={<CabecalhoCarregando />}>
+          <Suspense fallback={<EsqueletoIdentidade />}>
             <IdentidadePrestador />
           </Suspense>
         </div>

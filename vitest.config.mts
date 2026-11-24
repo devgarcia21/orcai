@@ -8,7 +8,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.{ts,tsx}"],
     // Os helpers de data dependem do fuso; fixamos para os testes serem estáveis.
     env: { TZ: "UTC" },
   },

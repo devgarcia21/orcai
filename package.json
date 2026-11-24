@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
+    "@react-pdf/renderer": "^4.9.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.119.2",
     "class-variance-authority": "^0.7.1",
@@ -36,6 +37,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
     "eslint-config-prettier": "^10.1.8",
+    "pdfjs-dist": "^4.10.38",
     "prettier": "^3.10.1",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "4.3.3",

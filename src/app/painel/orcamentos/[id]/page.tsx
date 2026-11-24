@@ -2,14 +2,17 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 
-import { CabecalhoPagina } from "@/components/comum/cabecalho-pagina";
+import { CabecalhoPagina, LinkVoltar } from "@/components/comum/cabecalho-pagina";
 import { AcoesOrcamento } from "@/components/orcamentos/acoes-orcamento";
 import { BadgeStatus } from "@/components/orcamentos/badge-status";
 import { ResumoValores } from "@/components/orcamentos/resumo-valores";
+import { EsqueletoDetalheOrcamento } from "@/components/painel/esqueletos";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { obterOrcamento } from "@/lib/dados/orcamentos";
-import { nomeDeExibicao, obterPrestadorAtual } from "@/lib/dados/prestador";
+import { obterPrestadorAtual } from "@/lib/dados/prestador";
+import { nomeDeExibicao } from "@/lib/prestador";
 import { formatarData, hojeISO } from "@/lib/datas";
 import { formatarTelefone } from "@/lib/formatacao";
 import { formatarMoeda, formatarQuantidade } from "@/lib/moeda";
@@ -29,9 +32,9 @@ function BlocoTexto({ titulo, texto }: { titulo: string; texto: string | null })
   );
 }
 
-export default async function OrcamentoPage({
-  params,
-}: PageProps<"/painel/orcamentos/[id]">) {
+type Params = PageProps<"/painel/orcamentos/[id]">["params"];
+
+async function DetalheOrcamento({ params }: { params: Params }) {
   const { id } = await params;
   const [orcamento, prestador] = await Promise.all([
     obterOrcamento(id),
@@ -54,7 +57,6 @@ export default async function OrcamentoPage({
   return (
     <div className="grid gap-6">
       <CabecalhoPagina
-        voltar={{ href: ROTAS.orcamentos, rotulo: "Orçamentos" }}
         titulo={orcamento.titulo}
         descricao={
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
@@ -189,6 +191,18 @@ export default async function OrcamentoPage({
           </Card>
         </aside>
       </div>
+    </div>
+  );
+}
+
+/** Casca: o link de voltar aparece na hora; o orçamento chega em streaming. */
+export default function OrcamentoPage({ params }: PageProps<"/painel/orcamentos/[id]">) {
+  return (
+    <div className="grid gap-3">
+      <LinkVoltar href={ROTAS.orcamentos} rotulo="Orçamentos" />
+      <Suspense fallback={<EsqueletoDetalheOrcamento />}>
+        <DetalheOrcamento params={params} />
+      </Suspense>
     </div>
   );
 }

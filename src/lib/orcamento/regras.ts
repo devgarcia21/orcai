@@ -40,5 +40,10 @@ export function proximosStatus(atual: StatusOrcamento): StatusOrcamento[] {
 
 /** 7 → "#0007" */
 export function formatarNumeroOrcamento(numero: number): string {
-  return `#${String(numero).padStart(4, "0")}`;
+  return `#${numeroComZeros(numero)}`;
+}
+
+/** 7 → "0007" (usado no PDF e no nome do arquivo) */
+export function numeroComZeros(numero: number): string {
+  return String(numero).padStart(4, "0");
 }

@@ -1,13 +1,15 @@
 import { FileText, Mail, MapPin, Pencil, Phone, StickyNote } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 
 import { BotaoExcluirCliente } from "@/components/clientes/botao-excluir-cliente";
 import { DialogoCliente } from "@/components/clientes/dialogo-cliente";
-import { CabecalhoPagina } from "@/components/comum/cabecalho-pagina";
+import { CabecalhoPagina, LinkVoltar } from "@/components/comum/cabecalho-pagina";
 import { EstadoVazio } from "@/components/comum/estado-vazio";
 import { BotaoNovoOrcamento } from "@/components/orcamentos/botao-novo-orcamento";
 import { TabelaOrcamentos } from "@/components/orcamentos/tabela-orcamentos";
+import { EsqueletoDetalheCliente } from "@/components/painel/esqueletos";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { obterCliente } from "@/lib/dados/clientes";
@@ -32,9 +34,9 @@ function Dado({
   );
 }
 
-export default async function ClientePage({
-  params,
-}: PageProps<"/painel/clientes/[id]">) {
+type Params = PageProps<"/painel/clientes/[id]">["params"];
+
+async function DetalheCliente({ params }: { params: Params }) {
   const { id } = await params;
   const [cliente, orcamentos] = await Promise.all([
     obterCliente(id),
@@ -48,7 +50,6 @@ export default async function ClientePage({
   return (
     <div className="grid gap-6">
       <CabecalhoPagina
-        voltar={{ href: ROTAS.clientes, rotulo: "Clientes" }}
         titulo={cliente.nome}
         acoes={
           <>
@@ -133,6 +134,18 @@ export default async function ClientePage({
           />
         )}
       </section>
+    </div>
+  );
+}
+
+/** Casca: o link de voltar aparece na hora; os dados do cliente chegam em streaming. */
+export default function ClientePage({ params }: PageProps<"/painel/clientes/[id]">) {
+  return (
+    <div className="grid gap-3">
+      <LinkVoltar href={ROTAS.clientes} rotulo="Clientes" />
+      <Suspense fallback={<EsqueletoDetalheCliente />}>
+        <DetalheCliente params={params} />
+      </Suspense>
     </div>
   );
 }

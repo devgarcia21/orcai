@@ -27,6 +27,8 @@ import { rotaEditarOrcamento } from "@/lib/rotas";
 import type { StatusOrcamento } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
 
+import { BotoesPdf } from "./botoes-pdf";
+
 const ACAO_STATUS: Record<
   Exclude<StatusOrcamento, "rascunho">,
   { rotulo: string; icone: LucideIcon; confirmar?: string }
@@ -74,6 +76,9 @@ export function AcoesOrcamento({ orcamento }: Props) {
   return (
     <div className="grid gap-3">
       {resultado && <MensagemFormulario estado={resultado} />}
+
+      {/* PDF disponível em qualquer status */}
+      <BotoesPdf orcamentoId={orcamento.id} />
 
       {proximos.length > 0 && (
         <div className="grid gap-2 sm:flex sm:flex-wrap">
