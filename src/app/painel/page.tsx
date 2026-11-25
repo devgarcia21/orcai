@@ -33,7 +33,7 @@ import {
 import { numeroComZeros } from "@/lib/orcamento/regras";
 import { nomeDeExibicao, pendenciasPerfil, perfilCompleto } from "@/lib/prestador";
 import { rotaPublicaOrcamento, ROTAS } from "@/lib/rotas";
-import { urlDoApp } from "@/lib/url-app";
+import { urlDoSite } from "@/lib/url-site";
 import { mensagemLembreteOrcamento, montarLinkWhatsApp } from "@/lib/whatsapp";
 
 export const metadata: Metadata = { title: "Painel" };
@@ -88,7 +88,7 @@ async function montarLembretes(
 ): Promise<Record<string, string>> {
   const comLink = semResposta.filter((item) => item.token_publico);
   if (comLink.length === 0) return {};
-  const [base, prestador] = await Promise.all([urlDoApp(), obterPrestadorAtual()]);
+  const [base, prestador] = await Promise.all([urlDoSite(), obterPrestadorAtual()]);
   return Object.fromEntries(
     comLink.map((item) => [
       item.id,

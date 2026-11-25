@@ -7,7 +7,7 @@ import { numeroComZeros } from "@/lib/orcamento/regras";
 import { nomeDeExibicao } from "@/lib/prestador";
 import { rotaPublicaOrcamento } from "@/lib/rotas";
 import type { OrcamentoCompleto, Prestador } from "@/lib/types/database";
-import { urlDoApp } from "@/lib/url-app";
+import { urlDoSite } from "@/lib/url-site";
 import { mensagemEnvioOrcamento, montarLinkWhatsApp } from "@/lib/whatsapp";
 
 export type DadosEnvio = {
@@ -23,7 +23,7 @@ export async function montarEnvio(
   prestador: Pick<Prestador, "nome" | "nome_empresa">,
   token: string,
 ): Promise<DadosEnvio> {
-  const link = `${await urlDoApp()}${rotaPublicaOrcamento(token)}`;
+  const link = `${await urlDoSite()}${rotaPublicaOrcamento(token)}`;
   const { total } = calcularResumo(
     orcamento.itens,
     orcamento.desconto_centavos,

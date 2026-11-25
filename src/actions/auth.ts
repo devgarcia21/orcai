@@ -1,23 +1,15 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { erro, erroDeValidacao, sucesso, type EstadoAcao } from "@/lib/acoes";
 import { destinoSeguro, ROTAS } from "@/lib/rotas";
 import { traduzirErroAuth } from "@/lib/supabase/erros";
 import { createClient } from "@/lib/supabase/server";
+import { urlDoSite } from "@/lib/url-site";
 import { cadastroSchema, loginSchema } from "@/lib/validacoes/auth";
 
 const texto = (formData: FormData, campo: string) => String(formData.get(campo) ?? "");
-
-async function urlDoSite() {
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  const protocolo =
-    h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  return `${protocolo}://${host}`;
-}
 
 export async function cadastrar(
   _anterior: EstadoAcao,

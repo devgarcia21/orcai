@@ -86,7 +86,7 @@ src/
       historico.ts unidades.ts limite.ts aplicar.ts precos-texto.ts
     whatsapp.ts             # telefone → wa.me, link com mensagem, textos padrão (+ testes)
     envio-orcamento.ts      # monta link público + link do WhatsApp (servidor)
-    url-app.ts              # base dos links (NEXT_PUBLIC_APP_URL) · copiar.ts (clipboard)
+    url-site.ts             # base dos links (NEXT_PUBLIC_SITE_URL) (+ testes) · copiar.ts (clipboard)
     supabase/               # clientes browser/server/proxy, env, tradução de erros
     dados/                  # leitura de dados no servidor (com React cache)
     validacoes/             # schemas zod (comum, auth, perfil, cliente, orcamento)
@@ -382,6 +382,21 @@ fallback={<Esqueleto/>}><Dados params={params}/></Suspense></> }`. Nunca faça `
 - Verificado: 46 testes de métricas; Gemini real ("3 tomadas a 20 reais cada" e "por 60 reais"
   → R$ 20,00; sem preço → histórico); navegador com Supabase falso (indicadores conferidos à mão,
   funil, gráfico, atenção, lembrete, troca de período/voltar, Vencido, conta nova).
+
+### Deploy (Vercel)
+
+- **URL do site** só por `urlDoSite()` (`lib/url-site.ts`): `NEXT_PUBLIC_SITE_URL` → em
+  produção na Vercel, `VERCEL_PROJECT_PRODUCTION_URL` → em produção fora dela, o host da
+  requisição → no dev, `http://localhost:3000`. Usada nos links públicos, no WhatsApp e no
+  `emailRedirectTo` do cadastro. Nunca escreva localhost/URL fixa no código.
+- O `/auth/callback` redireciona para o `origin` da própria requisição (mesmo domínio;
+  funciona também em deploys de preview).
+- **Segredos**: `GEMINI_API_KEY` só em `lib/ia/configuracao.ts`/`gemini.ts` (com
+  `server-only`). Não existe service role no projeto. Variáveis públicas: só as
+  `NEXT_PUBLIC_` do `.env.example`. Conferido no build: a chave não aparece em `.next/static`.
+- `.env*` no `.gitignore` (exceto `.env.example`, só com nomes e comentários).
+- As fontes do PDF entram nas DUAS rotas de PDF (`outputFileTracingIncludes`: painel e
+  `/o/*/pdf`) — sem isso o PDF público quebraria só em produção.
 
 ## Convenções
 

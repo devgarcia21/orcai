@@ -75,10 +75,10 @@ Postgres, Storage) · Google Gemini · zod · Server Actions · React PDF · Vit
    npm install
    ```
 
-2. Copie `.env.local.example` para `.env.local` e preencha com a URL e a chave
-   publicável do seu projeto Supabase (_Project Settings → API Keys_) e com o endereço
-   do app em `NEXT_PUBLIC_APP_URL` (ex.: `http://localhost:3000`), usado nos links
-   enviados aos clientes. Para a IA, preencha `GEMINI_API_KEY` (veja "Sobre a IA").
+2. Copie `.env.example` para `.env.local` e preencha com a URL e a chave
+   publicável do seu projeto Supabase (_Project Settings → API Keys_). O endereço do site
+   (`NEXT_PUBLIC_SITE_URL`) pode ficar vazio no desenvolvimento (usa
+   `http://localhost:3000`). Para a IA, preencha `GEMINI_API_KEY` (veja "Sobre a IA").
 
 3. No Supabase, abra o **SQL Editor** e execute, **em ordem**, cada arquivo de
    `supabase/migrations/`:
@@ -97,6 +97,21 @@ Postgres, Storage) · Google Gemini · zod · Server Actions · React PDF · Vit
    ```
 
    Acesse <http://localhost:3000>.
+
+## Deploy na Vercel
+
+1. Importe o repositório na Vercel (framework: Next.js; build e saída padrão).
+2. Em **Settings → Environment Variables**, cadastre as variáveis do `.env.example`:
+   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+   `NEXT_PUBLIC_SITE_URL` (o domínio do site, ex.: `https://orcai.vercel.app`) e
+   `GEMINI_API_KEY` (opcionalmente `GEMINI_MODEL`). Variáveis `NEXT_PUBLIC_` entram no
+   build: depois de mudar alguma, faça um novo deploy.
+3. No Supabase, em **Authentication → URL Configuration**, coloque o domínio em **Site URL**
+   e adicione `https://SEU-DOMINIO/auth/callback` em **Redirect URLs** (mantenha
+   `http://localhost:3000/auth/callback` para continuar testando no computador).
+
+Sem `NEXT_PUBLIC_SITE_URL` em produção, os links usam o domínio de produção que a própria
+Vercel informa — mas é melhor definir, principalmente com domínio próprio.
 
 ## Scripts
 

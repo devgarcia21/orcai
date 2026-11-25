@@ -32,8 +32,7 @@ yarn-error.log*
 
 # variáveis de ambiente (nunca versionar chaves)
 .env*
-.env.local
-!.env.local.example
+!.env.example
 
 # vercel
 .vercel

@@ -21,9 +21,10 @@ const nextConfig: NextConfig = {
     },
   },
   // As fontes do PDF são lidas do disco em tempo de execução; garante que
-  // entrem no pacote da rota em produção (ex.: Vercel).
+  // entrem no pacote das DUAS rotas de PDF em produção (ex.: Vercel).
   outputFileTracingIncludes: {
     "/painel/orcamentos/*/pdf": ["./src/lib/pdf/fontes/**/*"],
+    "/o/*/pdf": ["./src/lib/pdf/fontes/**/*"],
   },
   images: {
     remotePatterns: [
