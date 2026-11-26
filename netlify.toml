@@ -1,0 +1,11 @@
+# Deploy na Netlify. O Next.js é detectado sozinho e roda pelo adaptador oficial
+# (OpenNext): páginas, Server Actions, rotas de PDF e o proxy viram funções.
+# As variáveis de ambiente ficam no painel da Netlify (veja .env.example), nunca aqui.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Mesma versão usada no desenvolvimento (o projeto pede Node 22 ou superior).
+  NODE_VERSION = "22"

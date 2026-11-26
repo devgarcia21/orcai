@@ -383,10 +383,11 @@ fallback={<Esqueleto/>}><Dados params={params}/></Suspense></> }`. Nunca faça `
   → R$ 20,00; sem preço → histórico); navegador com Supabase falso (indicadores conferidos à mão,
   funil, gráfico, atenção, lembrete, troca de período/voltar, Vencido, conta nova).
 
-### Deploy (Vercel)
+### Deploy (Netlify; também funciona na Vercel)
 
 - **URL do site** só por `urlDoSite()` (`lib/url-site.ts`): `NEXT_PUBLIC_SITE_URL` → em
-  produção na Vercel, `VERCEL_PROJECT_PRODUCTION_URL` → em produção fora dela, o host da
+  produção, `NETLIFY_SITE_URL` (o `URL`/`DEPLOY_PRIME_URL` da Netlify, que só existe no build,
+  embutido via `env` no `next.config.ts`) ou `VERCEL_PROJECT_PRODUCTION_URL` → senão o host da
   requisição → no dev, `http://localhost:3000`. Usada nos links públicos, no WhatsApp e no
   `emailRedirectTo` do cadastro. Nunca escreva localhost/URL fixa no código.
 - O `/auth/callback` redireciona para o `origin` da própria requisição (mesmo domínio;
@@ -395,6 +396,9 @@ fallback={<Esqueleto/>}><Dados params={params}/></Suspense></> }`. Nunca faça `
   `server-only`). Não existe service role no projeto. Variáveis públicas: só as
   `NEXT_PUBLIC_` do `.env.example`. Conferido no build: a chave não aparece em `.next/static`.
 - `.env*` no `.gitignore` (exceto `.env.example`, só com nomes e comentários).
+- `netlify.toml`: build `npm run build`, publish `.next`, Node 22. O adaptador oficial
+  (OpenNext) cuida de SSR, Server Actions, PPR e do proxy. Limite das funções síncronas na
+  Netlify: 60 s (o timeout da IA é 30 s).
 - As fontes do PDF entram nas DUAS rotas de PDF (`outputFileTracingIncludes`: painel e
   `/o/*/pdf`) — sem isso o PDF público quebraria só em produção.
 

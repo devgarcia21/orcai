@@ -34,6 +34,23 @@ describe("resolverUrlDoSite", () => {
     ).toBe("https://orcai.vercel.app");
   });
 
+  it("produção na Netlify sem a variável: endereço do site gravado no build", () => {
+    expect(
+      resolverUrlDoSite({
+        NODE_ENV: "production",
+        NETLIFY_SITE_URL: "https://orcai.netlify.app/",
+      }),
+    ).toBe("https://orcai.netlify.app");
+    // NEXT_PUBLIC_SITE_URL (ex.: domínio próprio) continua tendo prioridade
+    expect(
+      resolverUrlDoSite({
+        NODE_ENV: "production",
+        NEXT_PUBLIC_SITE_URL: "https://orcai.com.br",
+        NETLIFY_SITE_URL: "https://orcai.netlify.app",
+      }),
+    ).toBe("https://orcai.com.br");
+  });
+
   it("produção sem nada configurado: null (usa o endereço da requisição, nunca localhost)", () => {
     expect(resolverUrlDoSite({ NODE_ENV: "production" })).toBeNull();
   });

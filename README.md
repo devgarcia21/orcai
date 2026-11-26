@@ -6,28 +6,31 @@ O Orçaí é um SaaS para prestadores de serviço brasileiros (eletricistas, enc
 pedreiros, oficinas) criarem orçamentos bonitos e claros direto do celular, enviarem ao
 cliente pelo WhatsApp e receberem o sinal por PIX.
 
-> 🚧 Em construção. Etapa atual: **7 — painel com métricas**.
+## Principais funcionalidades
 
-## O que já funciona
+- **IA para montar orçamentos** — descreva ou dite o serviço ("trocar 3 tomadas a 20 reais
+  cada e instalar um chuveiro") e o Google Gemini sugere os itens, com unidade, quantidade e
+  valor. Você revisa antes de adicionar, e a IA nunca inventa preço.
+- **PDF profissional** — orçamento em A4 com logo, tabela de itens, totais, condições e QR Code
+  PIX, para ver, baixar ou mandar ao cliente.
+- **Link público com aprovação** — o orçamento vai pelo WhatsApp com mensagem pronta; o cliente
+  abre o link (sem login), vê tudo e aprova ou recusa. Você acompanha na linha do tempo e pode
+  mandar um lembrete pelo WhatsApp.
+- **PIX do sinal** — depois de aprovar, o cliente paga o sinal pelo QR Code ou pelo "Pix Copia e
+  Cola", gerados a partir da sua chave PIX, sem intermediários nem taxas.
+- **Painel com métricas** — valor aprovado, sinais a receber, taxa de aprovação, gráfico dos
+  últimos 6 meses, funil e o que precisa da sua atenção.
+
+## Tudo o que já funciona
 
 - Cadastro, login e perfil do prestador (com logo e chave PIX)
 - Cadastro de clientes com busca por nome ou telefone
 - Orçamentos com itens, desconto, sinal e validade, com resumo calculado em tempo real
 - Numeração automática por prestador (#0001, #0002...)
-- Status (rascunho, enviado, aprovado, recusado), duplicar e excluir
-- PDF profissional do orçamento (A4, com logo, tabela de itens, totais e chave PIX), para ver ou baixar
+- Status (rascunho, enviado, aprovado, recusado e "Vencido"), duplicar e excluir
 - Navegação instantânea no painel: a tela aparece na hora e os dados chegam em seguida
-- Envio pelo WhatsApp com mensagem pronta e link público do orçamento
-- Página do cliente (sem login): ver itens e totais, copiar a chave PIX, baixar o PDF e aprovar ou recusar
-- Linha do tempo no painel: criado, enviado, visualizado pelo cliente, resposta e sinal recebido
-- Pagamento do sinal por PIX: depois de aprovar, o cliente vê o QR Code e o "Pix Copia e Cola"
-  com o valor do sinal (ou do total, se o sinal for 0%); o QR também sai no PDF
-- **Montar com IA**: descreva (ou dite) o serviço — "trocar 3 tomadas e instalar um chuveiro" —
-  e a IA sugere os itens com unidade e quantidade; você revisa e adiciona ao orçamento
-- **Painel com métricas** no Início: valor aprovado, sinais a receber e recebidos, taxa de
-  aprovação e orçamentos aguardando resposta (com comparação com o período anterior), gráfico
-  dos últimos 6 meses, funil e uma lista do que precisa de atenção — com lembrete pelo WhatsApp
-- Orçamentos enviados com a validade vencida aparecem como "Vencido"
+- Linha do tempo: criado, enviado, visualizado pelo cliente, resposta e sinal recebido
+- Ditado por voz no "Montar com IA" (navegadores com suporte)
 
 ## Sobre o pagamento por PIX
 
@@ -61,8 +64,10 @@ trocar de provedor é criar outra implementação.
 
 ## Tecnologias
 
-Next.js 16 (App Router) · TypeScript · Tailwind CSS · shadcn/ui · Supabase (Auth,
-Postgres, Storage) · Google Gemini · zod · Server Actions · React PDF · Vitest
+- **Next.js 16** (App Router, Server Actions, Cache Components) e **TypeScript**
+- **Supabase**: autenticação, Postgres com RLS e Storage (logos)
+- **Google Gemini** (`@google/genai`), só no servidor, para o "Montar com IA"
+- Tailwind CSS + shadcn/ui · zod · React PDF · Vitest
 
 ## Como rodar
 
@@ -98,20 +103,23 @@ Postgres, Storage) · Google Gemini · zod · Server Actions · React PDF · Vit
 
    Acesse <http://localhost:3000>.
 
-## Deploy na Vercel
+## Deploy na Netlify
 
-1. Importe o repositório na Vercel (framework: Next.js; build e saída padrão).
-2. Em **Settings → Environment Variables**, cadastre as variáveis do `.env.example`:
-   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
-   `NEXT_PUBLIC_SITE_URL` (o domínio do site, ex.: `https://orcai.vercel.app`) e
-   `GEMINI_API_KEY` (opcionalmente `GEMINI_MODEL`). Variáveis `NEXT_PUBLIC_` entram no
-   build: depois de mudar alguma, faça um novo deploy.
-3. No Supabase, em **Authentication → URL Configuration**, coloque o domínio em **Site URL**
-   e adicione `https://SEU-DOMINIO/auth/callback` em **Redirect URLs** (mantenha
+1. Na Netlify, **Add new project → Import an existing project** e escolha o repositório. O
+   Next.js é detectado sozinho; o `netlify.toml` já define o build (`npm run build`), a pasta
+   (`.next`) e o Node 22.
+2. Em **Project configuration → Environment variables**, cadastre as variáveis do
+   `.env.example`: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+   `NEXT_PUBLIC_SITE_URL` (ex.: `https://orcai.netlify.app`) e `GEMINI_API_KEY`
+   (opcionalmente `GEMINI_MODEL`). Variáveis `NEXT_PUBLIC_` entram no build: depois de mudar
+   alguma, faça um novo deploy (**Deploys → Trigger deploy**).
+3. No Supabase, em **Authentication → URL Configuration**, coloque o endereço do site em
+   **Site URL** e adicione `https://SEU-SITE/auth/callback` em **Redirect URLs** (mantenha
    `http://localhost:3000/auth/callback` para continuar testando no computador).
 
-Sem `NEXT_PUBLIC_SITE_URL` em produção, os links usam o domínio de produção que a própria
-Vercel informa — mas é melhor definir, principalmente com domínio próprio.
+Sem `NEXT_PUBLIC_SITE_URL`, os links usam o endereço que a Netlify informa durante o build —
+mas é melhor cadastrar, principalmente com domínio próprio. O projeto também funciona na
+Vercel (mesmas variáveis).
 
 ## Scripts
 
